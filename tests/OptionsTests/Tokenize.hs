@@ -32,28 +32,28 @@ test_Tokenize = suite "tokenize"
 
 commandDefs :: OptionDefinitions ()
 commandDefs = OptionDefinitions
-	[ OptionInfo "test.a" ['a'] ["long-a"] False
-	, OptionInfo "test.x" ['x'] ["long-x"] True
-	, OptionInfo "test.y" ['y'] ["long-y"] True
-	, OptionInfo "test.z" ['z'] ["long-z"] True
+	[ OptionInfo "test.a" ['a'] ["long-a"] "default" False
+	, OptionInfo "test.x" ['x'] ["long-x"] "default" True
+	, OptionInfo "test.y" ['y'] ["long-y"] "default" True
+	, OptionInfo "test.z" ['z'] ["long-z"] "default" True
 	]
 	[]
 
 subcommandDefs :: OptionDefinitions ()
 subcommandDefs = OptionDefinitions
-	[ OptionInfo "test.a" ['a'] ["long-a"] False
-	, OptionInfo "test.b" ['b'] ["long-b"] False
-	, OptionInfo "test.x" ['x'] ["long-x"] True
-	, OptionInfo "test.y" ['y'] ["long-y"] True
-	, OptionInfo "test.z" ['z'] ["long-z"] True
+	[ OptionInfo "test.a" ['a'] ["long-a"] "default" False
+	, OptionInfo "test.b" ['b'] ["long-b"] "default" False
+	, OptionInfo "test.x" ['x'] ["long-x"] "default" True
+	, OptionInfo "test.y" ['y'] ["long-y"] "default" True
+	, OptionInfo "test.z" ['z'] ["long-z"] "default" True
 	]
 	[ ("sub1",
-		[ OptionInfo "sub.d" ['d'] ["long-d"] False
-		, OptionInfo "sub.e" ['e'] ["long-e"] True
+		[ OptionInfo "sub.d" ['d'] ["long-d"] "default" False
+		, OptionInfo "sub.e" ['e'] ["long-e"] "default" True
 		])
 	, ("sub2",
-		[ OptionInfo "sub.d" ['d'] ["long-d"] True
-		, OptionInfo "sub.e" ['e'] ["long-e"] True
+		[ OptionInfo "sub.d" ['d'] ["long-d"] "default" True
+		, OptionInfo "sub.e" ['e'] ["long-e"] "default" True
 		])
 	]
 
