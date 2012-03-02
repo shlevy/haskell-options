@@ -7,9 +7,6 @@
 -- TODO: documentation here
 module Options
 	( Options
-	, Parser
-	, parseString
-	, parseBool
 	, OptionType
 	, optionTypeString
 	, optionTypeBool
@@ -17,7 +14,6 @@ module Options
 	, optionShortFlags
 	, optionLongFlags
 	, optionDefault
-	, optionParser
 	, optionType
 	, defineOptions
 	, option
@@ -45,37 +41,23 @@ class Options a where
 	optionsDefs :: OptionDefinitions a
 	optionsParse :: TokensFor a -> Either String a -- TODO: OptionError
 
-data Parser a = Parser (Q Exp)
+data OptionType a = OptionType Type Bool (Q Exp)
 
-parseString :: Parser String
-parseString = Parser [| Right |]
+optionTypeString :: OptionType String
+optionTypeString = OptionType (ConT ''String) False [| Right |]
 
-parseBool :: Parser Bool
-parseBool = Parser [| \s -> case s of
+optionTypeBool :: OptionType Bool
+optionTypeBool = OptionType (ConT ''Bool) True [| \s -> case s of
 	"" -> Right True
 	"true" -> Right True
 	"false" -> Right False
-	_ -> Left ("invalid boolean value: " ++ show s) |] -- TODO: include option flag
-
-data OptionType a = OptionType Type Bool
-
-optionTypeString :: OptionType String
-optionTypeString = OptionType (ConT ''String) False
-
-optionTypeBool :: OptionType Bool
-optionTypeBool = OptionType (ConT ''Bool) True
-
-optionTypeQType :: OptionType a -> Type
-optionTypeQType (OptionType t _) = t
-
-optionTypeUnary :: OptionType a -> Bool
-optionTypeUnary (OptionType _ u) = u
+	-- TODO: include option flag
+	_ -> Left ("invalid boolean value: " ++ show s) |]
 
 data Option a = Option
 	{ optionShortFlags :: [Char]
 	, optionLongFlags :: [String]
 	, optionDefault :: String
-	, optionParser :: Parser a
 	, optionType :: OptionType a
 	}
 
@@ -145,7 +127,6 @@ option fieldName f = do
 		{ optionShortFlags = []
 		, optionLongFlags = []
 		, optionDefault = ""
-		, optionParser = parseString
 		, optionType = optionTypeString
 		})
 	
@@ -156,11 +137,11 @@ option fieldName f = do
 	let shorts = optionShortFlags opt
 	let longs = optionLongFlags opt
 	let def = optionDefault opt
-	let unary = optionTypeUnary (optionType opt)
-	let Parser parseExp = optionParser opt
+	
+	let OptionType thType unary parseExp = optionType opt
 	putOptionDecl
 		(mkName fieldName)
-		(optionTypeQType (optionType opt))
+		thType
 		[| OptionInfo key shorts longs def unary |]
 		[| parseOptionTok key $parseExp def |]
 
@@ -191,7 +172,6 @@ boolOption name shorts longs def = option name (\o -> o
 	{ optionShortFlags = shorts
 	, optionLongFlags = longs
 	, optionDefault = if def then "true" else "false"
-	, optionParser = parseBool
 	, optionType = optionTypeBool
 	})
 
