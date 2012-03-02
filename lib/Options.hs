@@ -10,8 +10,6 @@ module Options
 	, Parser
 	, parseString
 	, parseBool
-	, Validator
-	, validateRequired
 	, OptionType
 	, optionTypeString
 	, optionTypeBool
@@ -20,7 +18,6 @@ module Options
 	, optionLongFlags
 	, optionDefault
 	, optionParser
-	, optionValidators
 	, optionType
 	, defineOptions
 	, option
@@ -60,13 +57,6 @@ parseBool = Parser [| \s -> case s of
 	"false" -> Right False
 	_ -> Left ("invalid boolean value: " ++ show s) |] -- TODO: include option flag
 
-data Validator a = Validator (Q Exp)
-
-validateRequired :: Validator String
-validateRequired = Validator [| \s -> if null s
-	then Just "must not be null" -- TODO: include option flag
-	else Nothing |]
-
 data OptionType a = OptionType Type Bool
 
 optionTypeString :: OptionType String
@@ -86,7 +76,6 @@ data Option a = Option
 	, optionLongFlags :: [String]
 	, optionDefault :: String
 	, optionParser :: Parser a
-	, optionValidators :: [Validator a]
 	, optionType :: OptionType a
 	}
 
@@ -157,7 +146,6 @@ option fieldName f = do
 		, optionLongFlags = []
 		, optionDefault = ""
 		, optionParser = parseString
-		, optionValidators = []
 		, optionType = optionTypeString
 		})
 	
@@ -204,7 +192,6 @@ boolOption name shorts longs def = option name (\o -> o
 	, optionLongFlags = longs
 	, optionDefault = if def then "true" else "false"
 	, optionParser = parseBool
-	, optionValidators = []
 	, optionType = optionTypeBool
 	})
 
