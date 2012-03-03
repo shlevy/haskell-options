@@ -173,17 +173,15 @@ options attrName optionTypeName = do
 	-- TODO: add a field (attrName :: optionTypeName)
 	undefined
 
-stringOption :: String -> [Char] -> [String] -> String -> OptionsM ()
-stringOption name shorts longs def = option name (\o -> o
-	{ optionShortFlags = shorts
-	, optionLongFlags = longs
+stringOption :: String -> String -> String -> OptionsM ()
+stringOption name flag def = option name (\o -> o
+	{ optionLongFlags = [flag]
 	, optionDefault = def
 	})
 
-boolOption :: String -> [Char] -> [String] -> Bool -> OptionsM ()
-boolOption name shorts longs def = option name (\o -> o
-	{ optionShortFlags = shorts
-	, optionLongFlags = longs
+boolOption :: String -> String -> Bool -> OptionsM ()
+boolOption name flag def = option name (\o -> o
+	{ optionLongFlags = [flag]
 	, optionDefault = if def then "true" else "false"
 	, optionType = optionTypeBool
 	})
