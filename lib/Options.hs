@@ -76,6 +76,10 @@ defineOptions rawName optionsM = do
 	let dataName = mkName rawName
 	let fields = runOptionsM loc optionsM
 	
+	-- TODO: check 'fields' for duplicate field names
+	-- TODO: check 'fields' for duplicate keys (should be impossible)
+	-- TODO: check 'fields' for duplicate flags
+	
 	let dataDec = DataD [] dataName [] [RecC dataName
 		[(fName, NotStrict, t) | (fName, t, _, _) <- fields]
 		][]
@@ -137,6 +141,15 @@ option fieldName f = do
 	let shorts = optionShortFlags opt
 	let longs = optionLongFlags opt
 	let def = optionDefault opt
+	
+	-- TODO: check that 'fieldName' is a valid Haskell field name
+	-- TODO: check that 'shorts' contains only non-repeated ASCII letters
+	--       and digits
+	-- TODO: check that 'longs' contains only non-repeated, non-empty
+	--       strings containing [A-Z] [a-z] [0-9] - _ and starting with a
+	--       letter or digit.
+	-- TODO: check that at least one flag is defined (in either 'shorts'
+	--       or 'longs').
 	
 	let OptionType thType unary parseExp = optionType opt
 	putOptionDecl
