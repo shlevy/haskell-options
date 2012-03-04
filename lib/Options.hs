@@ -10,6 +10,7 @@ module Options
 	, OptionType
 	, optionTypeString
 	, optionTypeBool
+	, optionTypeEnum
 	, Option
 	, optionShortFlags
 	, optionLongFlags
@@ -53,6 +54,16 @@ optionTypeBool = OptionType (ConT ''Bool) True [| \s -> case s of
 	"false" -> Right False
 	-- TODO: include option flag
 	_ -> Left ("invalid boolean value: " ++ show s) |]
+
+optionTypeEnum :: Name -> [(String, Name)] -> OptionType a
+optionTypeEnum typeName values =
+	-- TODO: check whether vName is a valid constructor name, and use either ConE or VarE
+	let qExprs = return (ListE [TupE [LitE (StringL key), ConE vName] | (key, vName) <- values]) in
+	OptionType (ConT typeName) False
+		[| let exprs = $qExprs in \s -> case lookup s exprs of
+			Just v -> Right v
+			-- TODO: include option flag and available values
+			Nothing -> Left ("invalid enum value: " ++ show s) |]
 
 data Option a = Option
 	{ optionShortFlags :: [Char]
