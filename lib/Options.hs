@@ -11,6 +11,7 @@ module Options
 	, optionTypeString
 	, optionTypeBool
 	, optionTypeEnum
+	, optionTypeList
 	, Option
 	, optionShortFlags
 	, optionLongFlags
@@ -64,6 +65,26 @@ optionTypeEnum typeName values =
 			Just v -> Right v
 			-- TODO: include option flag and available values
 			Nothing -> Left ("invalid enum value: " ++ show s) |]
+
+optionTypeList :: Char -> OptionType a -> OptionType [String]
+optionTypeList sep (OptionType valType _ valParseExp) = OptionType (AppT ListT valType) False [| \s -> parseList $valParseExp (split sep s) |]
+
+parseList :: (String -> Either String a) -> [String] -> Either String [a]
+parseList p = loop where
+	loop [] = Right []
+	loop (x:xs) = case p x of
+		Left err -> Left err
+		Right v -> case loop xs of
+			Left err -> Left err
+			Right vs -> Right (v:vs)
+
+split :: Char -> String -> [String]
+split _ [] = []
+split sep s0 = loop s0 where
+	loop s = let
+		(chunk, rest) = break (== sep) s
+		cont = chunk : loop (tail rest)
+		in if null rest then [chunk] else cont
 
 data Option a = Option
 	{ optionShortFlags :: [Char]
