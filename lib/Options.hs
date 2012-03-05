@@ -17,6 +17,7 @@ module Options
 	, optionLongFlags
 	, optionDefault
 	, optionType
+	, optionDescription
 	, defineOptions
 	, option
 	, options
@@ -91,6 +92,7 @@ data Option a = Option
 	, optionLongFlags :: [String]
 	, optionDefault :: String
 	, optionType :: OptionType a
+	, optionDescription :: String
 	}
 
 newtype OptionsM a = OptionsM { unOptionsM :: ReaderT Loc (Writer [(Name, Type, Q Exp, Q Exp)]) a }
@@ -164,6 +166,7 @@ option fieldName f = do
 		, optionLongFlags = []
 		, optionDefault = ""
 		, optionType = optionTypeString
+		, optionDescription = ""
 		})
 	
 	-- TODO: should options data type name be part of the key?
@@ -173,6 +176,8 @@ option fieldName f = do
 	let shorts = optionShortFlags opt
 	let longs = optionLongFlags opt
 	let def = optionDefault opt
+	
+	let desc = optionDescription opt
 	
 	-- TODO: check that 'fieldName' is a valid Haskell field name
 	-- TODO: check that 'shorts' contains only non-repeated ASCII letters
@@ -187,7 +192,7 @@ option fieldName f = do
 	putOptionDecl
 		(mkName fieldName)
 		thType
-		[| OptionInfo key shorts longs def unary |]
+		[| OptionInfo key shorts longs def unary desc |]
 		[| parseOptionTok key $parseExp def |]
 
 parseOptionTok :: String -> (String -> Either String a) -> String -> ParserM optType a
@@ -205,17 +210,19 @@ options attrName optionTypeName = do
 	-- TODO: add a field (attrName :: optionTypeName)
 	undefined
 
-stringOption :: String -> String -> String -> OptionsM ()
-stringOption name flag def = option name (\o -> o
+stringOption :: String -> String -> String -> String -> OptionsM ()
+stringOption name flag def desc = option name (\o -> o
 	{ optionLongFlags = [flag]
 	, optionDefault = def
+	, optionDescription = desc
 	})
 
-boolOption :: String -> String -> Bool -> OptionsM ()
-boolOption name flag def = option name (\o -> o
+boolOption :: String -> String -> Bool -> String -> OptionsM ()
+boolOption name flag def desc = option name (\o -> o
 	{ optionLongFlags = [flag]
 	, optionDefault = if def then "true" else "false"
 	, optionType = optionTypeBool
+	, optionDescription = desc
 	})
 
 getOptionsOrDie :: (MonadIO m, Options a) => m a

@@ -43,6 +43,7 @@ addHelpFlags (OptionDefinitions opts subcmds) = OptionDefinitions withHelp subcm
 				, optionInfoLongFlags = ["help"]
 				, optionInfoDefault = "false"
 				, optionInfoUnary = True
+				, optionInfoDescription = "Show help options."
 				}]
 		else if Set.member "help" longFlags
 			then [OptionInfo
@@ -51,6 +52,7 @@ addHelpFlags (OptionDefinitions opts subcmds) = OptionDefinitions withHelp subcm
 				, optionInfoLongFlags = []
 				, optionInfoDefault = "false"
 				, optionInfoUnary = True
+				, optionInfoDescription = "Show help options."
 				}]
 			else [OptionInfo
 				{ optionInfoKey = keyFor "optHelpSummary"
@@ -58,6 +60,7 @@ addHelpFlags (OptionDefinitions opts subcmds) = OptionDefinitions withHelp subcm
 				, optionInfoLongFlags = ["help"]
 				, optionInfoDefault = "false"
 				, optionInfoUnary = True
+				, optionInfoDescription = "Show help options."
 				}]
 	
 	optHelpAll = if Set.member "help-all" longFlags
@@ -68,6 +71,7 @@ addHelpFlags (OptionDefinitions opts subcmds) = OptionDefinitions withHelp subcm
 			, optionInfoLongFlags = ["help-all"]
 			, optionInfoDefault = "false"
 			, optionInfoUnary = True
+			, optionInfoDescription = "Show all help options."
 			}]
 
 checkHelpFlag :: TokensFor a -> Maybe HelpFlag
@@ -112,11 +116,22 @@ showOptionHelp info = do
 	let longs = optionInfoLongFlags info
 	let optStrings = map (\x -> ['-', x]) (safeHead shorts) ++ map (\x -> "--" ++ x) (safeHead longs)
 	unless (null optStrings) $ do
+		let optStringCsv = intercalate ", " optStrings
 		tell "  "
-		tell (intercalate ", " optStrings)
-		-- TODO
-		-- tell "             "
-		-- tell (helpSummary docs)
+		tell optStringCsv
+		
+		let desc = optionInfoDescription info
+		unless (null desc) $ do
+			if length optStringCsv > 27
+				then do
+					tell "\n"
+					tell "    "
+					tell (optionInfoDescription info)
+					tell "\n"
+				else do
+					tell (replicate (28 - length optStringCsv) ' ')
+					tell (optionInfoDescription info)
+		
 		tell "\n"
 
 showHelpSummary :: OptionDefinitions a -> Writer String ()

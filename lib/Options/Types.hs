@@ -17,6 +17,7 @@ data OptionInfo = OptionInfo
 	, optionInfoLongFlags :: [String]
 	, optionInfoDefault :: String
 	, optionInfoUnary :: Bool
+	, optionInfoDescription :: String
 	}
 
 data TokensFor a = TokensFor [(String, String)] [String]
