@@ -30,14 +30,14 @@ import           Control.Monad.Reader
 import           Control.Monad.Writer
 import           Data.List (foldl')
 import qualified System.Environment
-import           System.Exit (exitFailure)
+import           System.Exit (exitFailure, exitSuccess)
 import           System.IO
 
 import           Language.Haskell.TH
 
 import           Options.Types
 import           Options.Tokenize
--- import           Options.Help
+import           Options.Help
 
 class Options a where
 	optionsDefs :: OptionDefinitions a
@@ -221,14 +221,21 @@ boolOption name flag def = option name (\o -> o
 getOptionsOrDie :: (MonadIO m, Options a) => m a
 getOptionsOrDie = do
 	args <- liftIO System.Environment.getArgs
-	case tokenize optionsDefs args of
+	let defs = addHelpFlags optionsDefs
+	case tokenize defs args of
 		-- TODO: subcommands
 		-- TODO: --help
 		(_, Left err) -> liftIO $ do
+			hPutStrLn stderr (helpFor HelpSummary defs Nothing)
 			hPutStrLn stderr err
 			exitFailure
 		(_, Right tokens) -> case optionsParse tokens of
 			Left err -> liftIO $ do
+				hPutStrLn stderr (helpFor HelpSummary defs Nothing)
 				hPutStrLn stderr err
 				exitFailure
-			Right opts -> return opts
+			Right opts -> case checkHelpFlag tokens of
+				Just helpFlag -> liftIO $ do
+					hPutStrLn stdout (helpFor helpFlag defs Nothing)
+					exitSuccess
+				Nothing -> return opts
