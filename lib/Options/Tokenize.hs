@@ -84,8 +84,13 @@ nextItem = do
 addArg :: String -> Tok ()
 addArg s = modify (\st -> st { stArgs = stArgs st ++ [s] })
 
-addOpt :: String -> String -> Tok ()
-addOpt key val = modify (\st -> st { stOpts = stOpts st ++ [(key, val)] })
+addOpt :: String -> String -> String -> Tok ()
+addOpt flag key val = do
+	oldOpts <- gets stOpts
+	case lookup key oldOpts of
+		Nothing -> modify (\st -> st { stOpts = stOpts st ++ [(key, val)] })
+		-- TODO: include old and new values?
+		Just _ -> throwError ("duplicate value for option " ++ flag)
 
 mergeSubcommand :: String -> [OptionInfo] -> Tok ()
 mergeSubcommand name opts = modify $ \st -> st
@@ -101,25 +106,26 @@ parseLong optName = do
 		(before, after) -> case after of
 			'=' : value -> case Data.Map.lookup before longKeys of
 				Nothing -> throwError ("Unknown option: --" ++ before)
-				Just (key, _) -> addOpt key value
+				Just (key, _) -> addOpt ("--" ++ before) key value
 			_ -> case Data.Map.lookup optName longKeys of
 				Nothing -> throwError ("Unknown option: --" ++ optName)
 				Just (key, unary) -> if unary
-					then addOpt key ""
+					then addOpt ("--" ++ optName) key ""
 					else do
 						next <- nextItem
 						case next of
 							Nothing -> throwError ("option --" ++ optName ++ " requires an argument")
-							Just value -> addOpt key value
+							Just value -> addOpt ("--" ++ optName) key value
 
 parseShort :: Char -> String -> Tok ()
 parseShort optChar optValue = do
+	let optName = '-' : [optChar]
 	shortKeys <- gets stShortKeys
 	case Data.Map.lookup optChar shortKeys of
-		Nothing -> throwError ("Unknown option: -" ++ [optChar])
+		Nothing -> throwError ("Unknown option: " ++ optName)
 		Just (key, unary) -> if unary
 			then do
-				addOpt key ""
+				addOpt optName key ""
 				case optValue of
 					[] -> return ()
 					nextChar:nextValue -> parseShort nextChar nextValue
@@ -127,9 +133,9 @@ parseShort optChar optValue = do
 				"" -> do
 					next <- nextItem
 					case next of
-						Nothing -> throwError ("option -" ++ [optChar] ++ " requires an argument")
-						Just value -> addOpt key value
-				_ -> addOpt key optValue
+						Nothing -> throwError ("option " ++ optName ++ " requires an argument")
+						Just value -> addOpt optName key value
+				_ -> addOpt optName key optValue
 
 toShortKeys :: [OptionInfo] -> Data.Map.Map Char (String, Bool)
 toShortKeys opts = Data.Map.fromList $ do

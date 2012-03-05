@@ -21,10 +21,12 @@ test_Tokenize = suite "tokenize"
 	, test_ShortFlagUnknown
 	, test_ShortFlagMissing
 	, test_ShortFlagUnary
+	, test_ShortFlagDuplicate
 	, test_LongFlag
 	, test_LongFlagUnknown
 	, test_LongFlagMissing
 	, test_LongFlagUnary
+	, test_LongFlagDuplicate
 	, test_EndFlags
 	, test_Subcommand
 	, test_SubcommandUnknown
@@ -133,6 +135,30 @@ test_ShortFlagUnary = assertions "short-flag-unary" $ do
 		$expect (equal [("test.x", ""), ("test.y", "")] tokens)
 		$expect (equal ["foo", "bar"] args)
 
+test_ShortFlagDuplicate :: Suite
+test_ShortFlagDuplicate = assertions "short-flag-duplicate" $ do
+	do
+		let (subcmd, eTokens) = tokenize commandDefs ["-x", "-x"]
+		$expect (equal Nothing subcmd)
+		$assert (left eTokens)
+		
+		let Left err = eTokens
+		$expect (equal "duplicate value for option -x" err)
+	do
+		let (subcmd, eTokens) = tokenize commandDefs ["-afoo", "-a", "foo"]
+		$expect (equal Nothing subcmd)
+		$assert (left eTokens)
+		
+		let Left err = eTokens
+		$expect (equal "duplicate value for option -a" err)
+	do
+		let (subcmd, eTokens) = tokenize commandDefs ["-afoo", "-afoo"]
+		$expect (equal Nothing subcmd)
+		$assert (left eTokens)
+		
+		let Left err = eTokens
+		$expect (equal "duplicate value for option -a" err)
+
 test_LongFlag :: Suite
 test_LongFlag = assertions "long-flag" $ do
 	do
@@ -196,6 +222,30 @@ test_LongFlagUnary = assertions "long-flag-unary" $ do
 		let Right (TokensFor tokens args) = eTokens
 		$expect (equal [("test.x", "foo")] tokens)
 		$expect (equal ["bar"] args)
+
+test_LongFlagDuplicate :: Suite
+test_LongFlagDuplicate = assertions "long-flag-duplicate" $ do
+	do
+		let (subcmd, eTokens) = tokenize commandDefs ["-x", "--long-x"]
+		$expect (equal Nothing subcmd)
+		$assert (left eTokens)
+		
+		let Left err = eTokens
+		$expect (equal "duplicate value for option --long-x" err)
+	do
+		let (subcmd, eTokens) = tokenize commandDefs ["-afoo", "--long-a", "foo"]
+		$expect (equal Nothing subcmd)
+		$assert (left eTokens)
+		
+		let Left err = eTokens
+		$expect (equal "duplicate value for option --long-a" err)
+	do
+		let (subcmd, eTokens) = tokenize commandDefs ["-afoo", "--long-a=foo"]
+		$expect (equal Nothing subcmd)
+		$assert (left eTokens)
+		
+		let Left err = eTokens
+		$expect (equal "duplicate value for option --long-a" err)
 
 test_EndFlags :: Suite
 test_EndFlags = assertions "end-flags" $ do
