@@ -18,11 +18,16 @@ module Options
 	, optionDefault
 	, optionType
 	, optionDescription
+	, optionGroup
 	, defineOptions
 	, option
 	, options
 	, stringOption
 	, boolOption
+	, Group
+	, group
+	, groupDescription
+	, groupHelpDescription
 	, getOptionsOrDie
 	) where
 
@@ -93,6 +98,7 @@ data Option a = Option
 	, optionDefault :: String
 	, optionType :: OptionType a
 	, optionDescription :: String
+	, optionGroup :: Group
 	}
 
 newtype OptionsM a = OptionsM { unOptionsM :: ReaderT Loc (Writer [(Name, Type, Q Exp, Q Exp)]) a }
@@ -161,12 +167,18 @@ putOptionDecl name qtype infoExp parseExp = OptionsM (tell [(name, qtype, infoEx
 
 option :: String -> (Option String -> Option a) -> OptionsM ()
 option fieldName f = do
+	let emptyGroup = Group
+		{ groupName = Nothing
+		, groupDescription = ""
+		, groupHelpDescription = ""
+		}
 	let opt = f (Option
 		{ optionShortFlags = []
 		, optionLongFlags = []
 		, optionDefault = ""
 		, optionType = optionTypeString
 		, optionDescription = ""
+		, optionGroup = emptyGroup
 		})
 	
 	-- TODO: should options data type name be part of the key?
@@ -178,6 +190,13 @@ option fieldName f = do
 	let def = optionDefault opt
 	
 	let desc = optionDescription opt
+	
+	let optGroup = optionGroup opt
+	let optGroupDesc = groupDescription optGroup
+	let optGroupHelpDesc = groupHelpDescription optGroup
+	let groupInfoExp = case groupName optGroup of
+		Nothing -> [| Nothing |]
+		Just n -> [| Just (GroupInfo n optGroupDesc optGroupHelpDesc) |]
 	
 	-- TODO: check that 'fieldName' is a valid Haskell field name
 	-- TODO: check that 'shorts' contains only non-repeated ASCII letters
@@ -192,7 +211,7 @@ option fieldName f = do
 	putOptionDecl
 		(mkName fieldName)
 		thType
-		[| OptionInfo key shorts longs def unary desc Nothing |]
+		[| OptionInfo key shorts longs def unary desc $groupInfoExp |]
 		[| parseOptionTok key $parseExp def |]
 
 parseOptionTok :: String -> (String -> Either String a) -> String -> ParserM optType a
@@ -225,6 +244,19 @@ boolOption name flag def desc = option name (\o -> o
 	, optionDescription = desc
 	})
 
+data Group = Group
+	{ groupName :: Maybe String
+	, groupDescription :: String
+	, groupHelpDescription :: String
+	}
+
+group :: String -> (Group -> Group) -> Group
+group name f = f (Group
+	{ groupName = Just name
+	, groupDescription = ""
+	, groupHelpDescription = ""
+	})
+
 getOptionsOrDie :: (MonadIO m, Options a) => m a
 getOptionsOrDie = do
 	args <- liftIO System.Environment.getArgs
@@ -233,16 +265,16 @@ getOptionsOrDie = do
 		-- TODO: subcommands
 		-- TODO: --help
 		(_, Left err) -> liftIO $ do
-			hPutStrLn stderr (helpFor HelpSummary defs Nothing)
+			hPutStr stderr (helpFor HelpSummary defs Nothing)
 			hPutStrLn stderr err
 			exitFailure
 		(_, Right tokens) -> case optionsParse tokens of
 			Left err -> liftIO $ do
-				hPutStrLn stderr (helpFor HelpSummary defs Nothing)
+				hPutStr stderr (helpFor HelpSummary defs Nothing)
 				hPutStrLn stderr err
 				exitFailure
 			Right opts -> case checkHelpFlag tokens of
 				Just helpFlag -> liftIO $ do
-					hPutStrLn stdout (helpFor helpFlag defs Nothing)
+					hPutStr stdout (helpFor helpFlag defs Nothing)
 					exitSuccess
 				Nothing -> return opts

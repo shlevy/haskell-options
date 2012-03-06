@@ -5,17 +5,17 @@
 -- TODO: documentation here
 module Options.Types
 	( OptionDefinitions(..)
-	, OptionGroupInfo(..)
+	, GroupInfo(..)
 	, OptionInfo(..)
 	, TokensFor(..)
 	) where
 
 data OptionDefinitions a = OptionDefinitions [OptionInfo] [(String, [OptionInfo])]
 
-data OptionGroupInfo = OptionGroupInfo
-	{ optionGroupInfoName :: String
-	, optionGroupInfoDescription :: String
-	, optionGroupInfoHelpDescription :: String
+data GroupInfo = GroupInfo
+	{ groupInfoName :: String
+	, groupInfoDescription :: String
+	, groupInfoHelpDescription :: String
 	}
 
 data OptionInfo = OptionInfo
@@ -25,7 +25,7 @@ data OptionInfo = OptionInfo
 	, optionInfoDefault :: String
 	, optionInfoUnary :: Bool
 	, optionInfoDescription :: String
-	, optionInfoGroup :: Maybe OptionGroupInfo
+	, optionInfoGroup :: Maybe GroupInfo
 	}
 
 data TokensFor a = TokensFor [(String, String)] [String]

@@ -36,10 +36,10 @@ addHelpFlags (OptionDefinitions opts subcmds) = OptionDefinitions withHelp subcm
 	-- TODO: option groups
 	withHelp = optHelpSummary ++ optsGroupHelp ++ opts
 	
-	groupHelp = OptionGroupInfo
-		{ optionGroupInfoName = "all"
-		, optionGroupInfoDescription = "Help Options"
-		, optionGroupInfoHelpDescription = "Show all help options."
+	groupHelp = GroupInfo
+		{ groupInfoName = "all"
+		, groupInfoDescription = "Help Options"
+		, groupInfoHelpDescription = "Show all help options."
 		}
 	
 	optSummary = OptionInfo
@@ -71,16 +71,16 @@ addHelpFlags (OptionDefinitions opts subcmds) = OptionDefinitions withHelp subcm
 		let (groupsAndOpts, _) = uniqueGroupInfos opts
 		let groups = [g | (g, _) <- groupsAndOpts]
 		group <- (groupHelp : groups)
-		let flag = "help-" ++ optionGroupInfoName group
+		let flag = "help-" ++ groupInfoName group
 		if Set.member flag longFlags
 			then []
 			else [OptionInfo
-				{ optionInfoKey = keyFor "optHelpGroup" ++ ":" ++ optionGroupInfoName group
+				{ optionInfoKey = keyFor "optHelpGroup" ++ ":" ++ groupInfoName group
 				, optionInfoShortFlags = []
 				, optionInfoLongFlags = [flag]
 				, optionInfoDefault = "false"
 				, optionInfoUnary = True
-				, optionInfoDescription = optionGroupInfoHelpDescription group
+				, optionInfoDescription = groupInfoHelpDescription group
 				, optionInfoGroup = Just groupHelp
 				}]
 
@@ -158,29 +158,27 @@ showHelpSummary (OptionDefinitions opts subcmds) = do
 	let (groupInfos, ungroupedOptions) = uniqueGroupInfos opts
 	
 	-- Always print --help group
-	let hasHelp = filter (\(g,_) -> optionGroupInfoName g == "all") groupInfos
+	let hasHelp = filter (\(g,_) -> groupInfoName g == "all") groupInfos
 	forM_ hasHelp showHelpGroup
 	
 	tell "Application Options:\n"
 	forM_ ungroupedOptions showOptionHelp
-	tell "\n"
 
 showHelpAll :: OptionDefinitions a -> Writer String ()
 showHelpAll (OptionDefinitions opts subcmds) = do
 	let (groupInfos, ungroupedOptions) = uniqueGroupInfos opts
 	
 	-- Always print --help group first, if present
-	let (hasHelp, noHelp) = partition (\(g,_) -> optionGroupInfoName g == "all") groupInfos
+	let (hasHelp, noHelp) = partition (\(g,_) -> groupInfoName g == "all") groupInfos
 	forM_ hasHelp showHelpGroup
 	forM_ noHelp showHelpGroup
 	
 	tell "Application Options:\n"
 	forM_ ungroupedOptions showOptionHelp
-	tell "\n"
 
-showHelpGroup :: (OptionGroupInfo, [OptionInfo]) -> Writer String ()
+showHelpGroup :: (GroupInfo, [OptionInfo]) -> Writer String ()
 showHelpGroup (groupInfo, opts) = do
-	tell (optionGroupInfoDescription groupInfo ++ ":\n")
+	tell (groupInfoDescription groupInfo ++ ":\n")
 	forM_ opts showOptionHelp
 	tell "\n"
 
@@ -189,7 +187,7 @@ showHelpOneGroup (OptionDefinitions opts subcmds) groupName = do
 	let (groupInfos, _) = uniqueGroupInfos opts
 	
 	-- Always print --help group
-	let group = filter (\(g,_) -> optionGroupInfoName g == groupName) groupInfos
+	let group = filter (\(g,_) -> groupInfoName g == groupName) groupInfos
 	forM_ group showHelpGroup
 
 keyFor :: String -> String
@@ -200,12 +198,12 @@ keyFor fieldName = this_pkg ++ ":" ++ this_mod ++ ":" ++ fieldName where
 		let mod' = loc_module loc
 		[| (pkg, mod') |])
 
-uniqueGroupInfos :: [OptionInfo] -> ([(OptionGroupInfo, [OptionInfo])], [OptionInfo])
+uniqueGroupInfos :: [OptionInfo] -> ([(GroupInfo, [OptionInfo])], [OptionInfo])
 uniqueGroupInfos allOptions = (Map.elems infoMap, ungroupedOptions) where
 	infoMap = Map.fromListWith merge $ do
 		opt <- allOptions
 		case optionInfoGroup opt of
 			Nothing -> []
-			Just g -> [(optionGroupInfoName g, (g, [opt]))]
+			Just g -> [(groupInfoName g, (g, [opt]))]
 	merge (g, opts1) (_, opts2) = (g, opts2 ++ opts1)
 	ungroupedOptions = [o | o <- allOptions, isNothing (optionInfoGroup o)]
