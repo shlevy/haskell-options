@@ -181,7 +181,6 @@ option fieldName f = do
 		, optionGroup = emptyGroup
 		})
 	
-	-- TODO: should options data type name be part of the key?
 	loc <- OptionsM ask
 	let key = loc_package loc ++ ":" ++ loc_module loc ++ ":" ++ fieldName
 	
@@ -263,7 +262,6 @@ getOptionsOrDie = do
 	let defs = addHelpFlags optionsDefs
 	case tokenize defs args of
 		-- TODO: subcommands
-		-- TODO: --help
 		(_, Left err) -> liftIO $ do
 			hPutStr stderr (helpFor HelpSummary defs Nothing)
 			hPutStrLn stderr err

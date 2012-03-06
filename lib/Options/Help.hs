@@ -33,7 +33,6 @@ addHelpFlags (OptionDefinitions opts subcmds) = OptionDefinitions withHelp subcm
 		opt <- opts
 		optionInfoLongFlags opt
 	
-	-- TODO: option groups
 	withHelp = optHelpSummary ++ optsGroupHelp ++ opts
 	
 	groupHelp = GroupInfo
