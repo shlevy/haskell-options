@@ -136,7 +136,7 @@ defineOptions rawName optionsM = do
 getOptionsDefs :: [(Name, Type, Q Exp, Q Exp)] -> Q Exp
 getOptionsDefs fields = do
 	infoExps <- forM fields (\(_, _, infoExp, _) -> infoExp)
-	[| OptionDefinitions $(return (ListE infoExps)) [] |] -- TODO: subcommands
+	[| OptionDefinitions (concat $(return (ListE infoExps))) [] |] -- TODO: subcommands
 
 getOptionsParse :: Name -> [(Name, Type, Q Exp, Q Exp)] -> Q Exp
 getOptionsParse dataName fields = do
@@ -210,7 +210,7 @@ option fieldName f = do
 	putOptionDecl
 		(mkName fieldName)
 		thType
-		[| OptionInfo key shorts longs def unary desc $groupInfoExp |]
+		[| [OptionInfo key shorts longs def unary desc $groupInfoExp] |]
 		[| parseOptionTok key $parseExp def |]
 
 parseOptionTok :: String -> (String -> Either String a) -> String -> ParserM optType a
@@ -224,9 +224,30 @@ parseOptionTok key p def = do
 		Right x -> return x
 
 options :: String -> Name -> OptionsM ()
-options attrName optionTypeName = do
-	-- TODO: add a field (attrName :: optionTypeName)
-	undefined
+options fieldName optionTypeName = do
+	-- TODO: check that 'fieldName' is a valid Haskell field name
+	putOptionDecl
+		(mkName fieldName)
+		(ConT optionTypeName)
+		[| suboptsDefs $(varE (mkName fieldName)) |]
+		[| parseSubOptions |]
+
+castTokens :: TokensFor a -> TokensFor b
+castTokens (TokensFor tokens args) = TokensFor tokens args
+
+parseSubOptions :: Options a => ParserM optType a
+parseSubOptions = do
+	tokens <- ParserM (\t -> Right t)
+	case optionsParse (castTokens tokens) of
+		Left err -> ParserM (\_ -> Left err)
+		Right x -> return x
+
+suboptsDefs :: Options a => (b -> a) -> [OptionInfo]
+suboptsDefs rec = defsB where
+	defsB = case defsA rec of
+		OptionDefinitions opts _ -> opts
+	defsA :: Options a => (b -> a) -> OptionDefinitions a
+	defsA _ = optionsDefs
 
 stringOption :: String -> String -> String -> String -> OptionsM ()
 stringOption name flag def desc = option name (\o -> o
