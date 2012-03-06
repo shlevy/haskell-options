@@ -192,7 +192,7 @@ option fieldName f = do
 	putOptionDecl
 		(mkName fieldName)
 		thType
-		[| OptionInfo key shorts longs def unary desc |]
+		[| OptionInfo key shorts longs def unary desc Nothing |]
 		[| parseOptionTok key $parseExp def |]
 
 parseOptionTok :: String -> (String -> Either String a) -> String -> ParserM optType a

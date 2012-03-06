@@ -13,8 +13,10 @@ module Options.Help
 	) where
 
 import           Control.Monad.Writer
-import           Data.List (intercalate)
+import           Data.List (intercalate, partition, stripPrefix)
+import           Data.Maybe (isNothing, listToMaybe, maybeToList)
 import qualified Data.Set as Set
+import qualified Data.Map as Map
 
 import           Language.Haskell.TH (location, loc_package, loc_module)
 
@@ -32,54 +34,71 @@ addHelpFlags (OptionDefinitions opts subcmds) = OptionDefinitions withHelp subcm
 		optionInfoLongFlags opt
 	
 	-- TODO: option groups
-	withHelp = optHelpSummary ++ optHelpAll ++ opts
+	withHelp = optHelpSummary ++ optsGroupHelp ++ opts
+	
+	groupHelp = OptionGroupInfo
+		{ optionGroupInfoName = "all"
+		, optionGroupInfoDescription = "Help Options"
+		, optionGroupInfoHelpDescription = "Show all help options."
+		}
+	
+	optSummary = OptionInfo
+		{ optionInfoKey = keyFor "optHelpSummary"
+		, optionInfoShortFlags = []
+		, optionInfoLongFlags = []
+		, optionInfoDefault = "false"
+		, optionInfoUnary = True
+		, optionInfoDescription = "Show option summary."
+		, optionInfoGroup = Just groupHelp
+		}
 	
 	optHelpSummary = if Set.member 'h' shortFlags
 		then if Set.member "help" longFlags
 			then []
-			else [OptionInfo
-				{ optionInfoKey = keyFor "optHelpSummary"
-				, optionInfoShortFlags = []
-				, optionInfoLongFlags = ["help"]
-				, optionInfoDefault = "false"
-				, optionInfoUnary = True
-				, optionInfoDescription = "Show help options."
+			else [optSummary
+				{ optionInfoLongFlags = ["help"]
 				}]
 		else if Set.member "help" longFlags
-			then [OptionInfo
-				{ optionInfoKey = keyFor "optHelpSummary"
-				, optionInfoShortFlags = ['h']
-				, optionInfoLongFlags = []
-				, optionInfoDefault = "false"
-				, optionInfoUnary = True
-				, optionInfoDescription = "Show help options."
+			then [optSummary
+				{ optionInfoShortFlags = ['h']
 				}]
-			else [OptionInfo
-				{ optionInfoKey = keyFor "optHelpSummary"
-				, optionInfoShortFlags = ['h']
+			else [optSummary
+				{ optionInfoShortFlags = ['h']
 				, optionInfoLongFlags = ["help"]
-				, optionInfoDefault = "false"
-				, optionInfoUnary = True
-				, optionInfoDescription = "Show help options."
 				}]
 	
-	optHelpAll = if Set.member "help-all" longFlags
-		then []
-		else [OptionInfo
-			{ optionInfoKey = keyFor "optHelpAll"
-			, optionInfoShortFlags = []
-			, optionInfoLongFlags = ["help-all"]
-			, optionInfoDefault = "false"
-			, optionInfoUnary = True
-			, optionInfoDescription = "Show all help options."
-			}]
+	optsGroupHelp = do
+		let (groupsAndOpts, _) = uniqueGroupInfos opts
+		let groups = [g | (g, _) <- groupsAndOpts]
+		group <- (groupHelp : groups)
+		let flag = "help-" ++ optionGroupInfoName group
+		if Set.member flag longFlags
+			then []
+			else [OptionInfo
+				{ optionInfoKey = keyFor "optHelpGroup" ++ ":" ++ optionGroupInfoName group
+				, optionInfoShortFlags = []
+				, optionInfoLongFlags = [flag]
+				, optionInfoDefault = "false"
+				, optionInfoUnary = True
+				, optionInfoDescription = optionGroupInfoHelpDescription group
+				, optionInfoGroup = Just groupHelp
+				}]
 
 checkHelpFlag :: TokensFor a -> Maybe HelpFlag
-checkHelpFlag (TokensFor tokens _) = case lookup (keyFor "optHelpSummary") tokens of
-	Nothing -> case lookup (keyFor "optHelpAll") tokens of
-		Nothing -> Nothing
-		Just _ -> Just HelpAll
-	Just _ -> Just HelpSummary
+checkHelpFlag (TokensFor tokens _) = flag where
+	flag = listToMaybe helpKeys
+	helpKeys = do
+		(k, _) <- tokens
+		if k == keySummary
+			then return HelpSummary
+			else if k == keyAll
+				then return HelpAll
+				else do
+					groupName <- maybeToList (stripPrefix keyGroupPrefix k)
+					return (HelpGroup groupName)
+	keySummary = keyFor "optHelpSummary"
+	keyAll = keyFor "optHelpGroup:all"
+	keyGroupPrefix = keyFor "optHelpGroup:"
 
 helpFor :: HelpFlag -> OptionDefinitions a -> Maybe String -> String
 helpFor flag defs maybeSubcommand = case (flag, maybeSubcommand) of
@@ -103,7 +122,7 @@ helpFor flag defs maybeSubcommand = case (flag, maybeSubcommand) of
 	                          -- show all options in option groups for subcommand 'subcmd'
 		undefined
 	(HelpGroup groupName, Nothing) -> -- show all options in group 'groupName', which must not be in a subcommand
-		undefined
+		execWriter (showHelpOneGroup defs groupName)
 	(HelpGroup groupName, Just subcmd) -> -- show all options in group 'groupName', which may be either global or in the subcommand 'subcmd'
 		undefined
 
@@ -136,55 +155,42 @@ showOptionHelp info = do
 
 showHelpSummary :: OptionDefinitions a -> Writer String ()
 showHelpSummary (OptionDefinitions opts subcmds) = do
-	{-
-	hPutStrLn h "Help Options:"
-	hPutStrLn h "  -h, --help             Show help options"
-	hPutStrLn h "  --help-all             Show all help options"
-	forM_ subGroups $ \(GroupInfo (Just slug) doc _) -> do
-		hPutStrLn h ("  --help-" ++ slug ++ "             " ++ (helpSummary doc))
+	let (groupInfos, ungroupedOptions) = uniqueGroupInfos opts
 	
-	hPutStrLn h ""
-	-}
+	-- Always print --help group
+	let hasHelp = filter (\(g,_) -> optionGroupInfoName g == "all") groupInfos
+	forM_ hasHelp showHelpGroup
 	
-	-- hPutStrLn h (helpSummary mainDoc ++ ":")
-	-- hPutStrLn h (helpDescription mainDoc ++ ":")
-	forM_ opts showOptionHelp
+	tell "Application Options:\n"
+	forM_ ungroupedOptions showOptionHelp
 	tell "\n"
 
 showHelpAll :: OptionDefinitions a -> Writer String ()
 showHelpAll (OptionDefinitions opts subcmds) = do
-	{-
-	hPutStrLn h "Help Options:"
-	hPutStrLn h "  -h, --help             Show help options"
-	hPutStrLn h "  --help-all             Show all help options"
-	forM_ subGroups $ \(GroupInfo (Just slug) doc _) -> do
-		hPutStrLn h ("  --help-" ++ slug ++ "             " ++ (helpSummary doc))
-	hPutStrLn h ""
-	-}
+	let (groupInfos, ungroupedOptions) = uniqueGroupInfos opts
 	
-	{-
-	forM_ subGroups $ \(GroupInfo _ doc opts) -> do
-		hPutStrLn h (helpSummary doc ++ ":")
-		hPutStrLn h (helpDescription doc) -- TODO: indent
-		hPutStrLn h ""
-		forM_ opts (showOptionHelp h)
-		hPutStrLn h ""
-	-}
+	-- Always print --help group first, if present
+	let (hasHelp, noHelp) = partition (\(g,_) -> optionGroupInfoName g == "all") groupInfos
+	forM_ hasHelp showHelpGroup
+	forM_ noHelp showHelpGroup
 	
-	-- hPutStrLn h (helpSummary mainDoc ++ ":")
-	-- hPutStrLn h (helpDescription mainDoc ++ ":")
+	tell "Application Options:\n"
+	forM_ ungroupedOptions showOptionHelp
+	tell "\n"
+
+showHelpGroup :: (OptionGroupInfo, [OptionInfo]) -> Writer String ()
+showHelpGroup (groupInfo, opts) = do
+	tell (optionGroupInfoDescription groupInfo ++ ":\n")
 	forM_ opts showOptionHelp
 	tell "\n"
 
-{-
-showHelpGroup :: Handle -> GroupInfo -> IO ()
-showHelpGroup h (GroupInfo _ doc opts) = do
-	hPutStrLn h (helpSummary doc ++ ":")
-	hPutStrLn h (helpDescription doc) -- TODO: indent
-	hPutStrLn h ""
-	forM_ opts (showOptionHelp h)
-	hPutStrLn h ""
--}
+showHelpOneGroup :: OptionDefinitions a -> String -> Writer String ()
+showHelpOneGroup (OptionDefinitions opts subcmds) groupName = do
+	let (groupInfos, _) = uniqueGroupInfos opts
+	
+	-- Always print --help group
+	let group = filter (\(g,_) -> optionGroupInfoName g == groupName) groupInfos
+	forM_ group showHelpGroup
 
 keyFor :: String -> String
 keyFor fieldName = this_pkg ++ ":" ++ this_mod ++ ":" ++ fieldName where
@@ -193,3 +199,13 @@ keyFor fieldName = this_pkg ++ ":" ++ this_mod ++ ":" ++ fieldName where
 		let pkg = loc_package loc
 		let mod' = loc_module loc
 		[| (pkg, mod') |])
+
+uniqueGroupInfos :: [OptionInfo] -> ([(OptionGroupInfo, [OptionInfo])], [OptionInfo])
+uniqueGroupInfos allOptions = (Map.elems infoMap, ungroupedOptions) where
+	infoMap = Map.fromListWith merge $ do
+		opt <- allOptions
+		case optionInfoGroup opt of
+			Nothing -> []
+			Just g -> [(optionGroupInfoName g, (g, [opt]))]
+	merge (g, opts1) (_, opts2) = (g, opts2 ++ opts1)
+	ungroupedOptions = [o | o <- allOptions, isNothing (optionInfoGroup o)]
