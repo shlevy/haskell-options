@@ -25,7 +25,7 @@ import           Options.Types
 data HelpFlag = HelpSummary | HelpAll | HelpGroup String
 
 addHelpFlags :: OptionDefinitions a -> OptionDefinitions a
-addHelpFlags (OptionDefinitions opts subcmds) = OptionDefinitions withHelp subcmds where
+addHelpFlags (OptionDefinitions opts subcmds) = OptionDefinitions withHelp subcmdsWithHelp where
 	shortFlags = Set.fromList $ do
 		opt <- opts
 		optionInfoShortFlags opt
@@ -51,6 +51,16 @@ addHelpFlags (OptionDefinitions opts subcmds) = OptionDefinitions withHelp subcm
 		, optionInfoGroup = Just groupHelp
 		}
 	
+	optGroupHelp group flag = OptionInfo
+		{ optionInfoKey = keyFor "optHelpGroup" ++ ":" ++ groupInfoName group
+		, optionInfoShortFlags = []
+		, optionInfoLongFlags = [flag]
+		, optionInfoDefault = "false"
+		, optionInfoUnary = True
+		, optionInfoDescription = groupInfoHelpDescription group
+		, optionInfoGroup = Just groupHelp
+		}
+	
 	optHelpSummary = if Set.member 'h' shortFlags
 		then if Set.member "help" longFlags
 			then []
@@ -73,15 +83,23 @@ addHelpFlags (OptionDefinitions opts subcmds) = OptionDefinitions withHelp subcm
 		let flag = "help-" ++ groupInfoName group
 		if Set.member flag longFlags
 			then []
-			else [OptionInfo
-				{ optionInfoKey = keyFor "optHelpGroup" ++ ":" ++ groupInfoName group
-				, optionInfoShortFlags = []
-				, optionInfoLongFlags = [flag]
-				, optionInfoDefault = "false"
-				, optionInfoUnary = True
-				, optionInfoDescription = groupInfoHelpDescription group
-				, optionInfoGroup = Just groupHelp
-				}]
+			else [optGroupHelp group flag]
+	
+	subcmdsWithHelp = do
+		(subcmdName, subcmdOpts) <- subcmds
+		let subcmdLongFlags = Set.fromList $ do
+			opt <- subcmdOpts ++ optsGroupHelp
+			optionInfoLongFlags opt
+		
+		let (groupsAndOpts, _) = uniqueGroupInfos subcmdOpts
+		let groups = [g | (g, _) <- groupsAndOpts]
+		let newOpts = do
+			group <- groups
+			let flag = "help-" ++ groupInfoName group
+			if Set.member flag (Set.union longFlags subcmdLongFlags)
+				then []
+				else [optGroupHelp group flag]
+		return (subcmdName, newOpts ++ subcmdOpts)
 
 checkHelpFlag :: TokensFor a -> Maybe HelpFlag
 checkHelpFlag (TokensFor tokens _) = flag where
@@ -100,30 +118,10 @@ checkHelpFlag (TokensFor tokens _) = flag where
 	keyGroupPrefix = keyFor "optHelpGroup:"
 
 helpFor :: HelpFlag -> OptionDefinitions a -> Maybe String -> String
-helpFor flag defs maybeSubcommand = case (flag, maybeSubcommand) of
-	(HelpSummary, Nothing) -> -- show all global options
-	                          -- show summaries of option groups
-	                          -- show summaries of all subcommands
-		execWriter (showHelpSummary defs)
-	(HelpSummary, Just subcmd) -> -- show all global options
-	                              -- show summaries of all global option groups
-	                              -- show all options in subcommand 'subcmd'
-	                              -- show summaries of all option groups for subcommand 'subcmd'
-		undefined
-	(HelpAll, Nothing) -> -- show all global options
-	                      -- show all options in all global option groups
-	                      -- show all options in all subcommands
-	                      -- show all options in all subcommand option groups
-		execWriter (showHelpAll defs)
-	(HelpAll, Just subcmd) -> -- show all global options
-	                          -- show all options in all global option groups
-	                          -- show all options in subcommand 'subcmd'
-	                          -- show all options in option groups for subcommand 'subcmd'
-		undefined
-	(HelpGroup groupName, Nothing) -> -- show all options in group 'groupName', which must not be in a subcommand
-		execWriter (showHelpOneGroup defs groupName)
-	(HelpGroup groupName, Just subcmd) -> -- show all options in group 'groupName', which may be either global or in the subcommand 'subcmd'
-		undefined
+helpFor flag defs subcmd = case flag of
+	HelpSummary -> execWriter (showHelpSummary defs subcmd)
+	HelpAll -> execWriter (showHelpAll defs subcmd)
+	HelpGroup groupName -> execWriter (showHelpOneGroup defs groupName subcmd)
 
 showOptionHelp :: OptionInfo -> Writer String ()
 showOptionHelp info = do
@@ -152,20 +150,47 @@ showOptionHelp info = do
 		
 		tell "\n"
 
-showHelpSummary :: OptionDefinitions a -> Writer String ()
-showHelpSummary (OptionDefinitions opts subcmds) = do
-	let (groupInfos, ungroupedOptions) = uniqueGroupInfos opts
+showHelpSummary :: OptionDefinitions a -> Maybe String -> Writer String ()
+showHelpSummary (OptionDefinitions mainOpts subcmds) subcmd = do
+	let subcmdOptions = do
+		subcmdName <- subcmd
+		opts <- lookup subcmdName subcmds
+		return (subcmdName, opts)
+	
+	let (groupInfos, ungroupedMainOptions) = uniqueGroupInfos mainOpts
 	
 	-- Always print --help group
 	let hasHelp = filter (\(g,_) -> groupInfoName g == "all") groupInfos
 	forM_ hasHelp showHelpGroup
 	
 	tell "Application Options:\n"
-	forM_ ungroupedOptions showOptionHelp
+	forM_ ungroupedMainOptions showOptionHelp
+	unless (null subcmds) (tell "\n")
+	
+	case subcmdOptions of
+		Nothing -> unless (null subcmds) $ do
+			tell "Subcommands:\n"
+			forM_ subcmds $ \(subcmdName, _) -> do
+				tell "  "
+				tell subcmdName
+				-- TODO: subcommand help description
+				tell "\n"
+			tell "\n"
+		Just (n, subOpts) -> do
+			-- TODO: subcommand description
+			-- TODO: handle grouped options in subcommands?
+			tell ("Options for subcommand " ++ show n ++ ":\n")
+			forM_ subOpts showOptionHelp
+			tell "\n"
 
-showHelpAll :: OptionDefinitions a -> Writer String ()
-showHelpAll (OptionDefinitions opts subcmds) = do
-	let (groupInfos, ungroupedOptions) = uniqueGroupInfos opts
+showHelpAll :: OptionDefinitions a -> Maybe String -> Writer String ()
+showHelpAll (OptionDefinitions mainOpts subcmds) subcmd = do
+	let subcmdOptions = do
+		subcmdName <- subcmd
+		opts <- lookup subcmdName subcmds
+		return (subcmdName, opts)
+	
+	let (groupInfos, ungroupedMainOptions) = uniqueGroupInfos mainOpts
 	
 	-- Always print --help group first, if present
 	let (hasHelp, noHelp) = partition (\(g,_) -> groupInfoName g == "all") groupInfos
@@ -173,7 +198,21 @@ showHelpAll (OptionDefinitions opts subcmds) = do
 	forM_ noHelp showHelpGroup
 	
 	tell "Application Options:\n"
-	forM_ ungroupedOptions showOptionHelp
+	forM_ ungroupedMainOptions showOptionHelp
+	unless (null subcmds) (tell "\n")
+	
+	case subcmdOptions of
+		Nothing -> forM_ subcmds $ \(subcmdName, subcmdOpts) -> do
+			-- no subcommand description
+			tell ("Options for subcommand " ++ show subcmdName ++ ":\n")
+			forM_ subcmdOpts showOptionHelp
+			tell "\n"
+		Just (n, subOpts) -> do
+			-- TODO: subcommand description
+			-- TODO: handle grouped options in subcommands?
+			tell ("Options for subcommand " ++ show n ++ ":\n")
+			forM_ subOpts showOptionHelp
+			tell "\n"
 
 showHelpGroup :: (GroupInfo, [OptionInfo]) -> Writer String ()
 showHelpGroup (groupInfo, opts) = do
@@ -181,8 +220,13 @@ showHelpGroup (groupInfo, opts) = do
 	forM_ opts showOptionHelp
 	tell "\n"
 
-showHelpOneGroup :: OptionDefinitions a -> String -> Writer String ()
-showHelpOneGroup (OptionDefinitions opts subcmds) groupName = do
+showHelpOneGroup :: OptionDefinitions a -> String -> Maybe String -> Writer String ()
+showHelpOneGroup (OptionDefinitions mainOpts subcmds) groupName subcmd = do
+	let opts = case subcmd of
+		Nothing -> mainOpts
+		Just n -> case lookup n subcmds of
+			Just infos -> mainOpts ++ infos -- both
+			Nothing -> mainOpts
 	let (groupInfos, _) = uniqueGroupInfos opts
 	
 	-- Always print --help group

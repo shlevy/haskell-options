@@ -29,6 +29,9 @@ module Options
 	, groupDescription
 	, groupHelpDescription
 	, getOptionsOrDie
+	, Subcommand
+	, subcommand
+	, runSubcommands
 	) where
 
 import           Control.Monad.IO.Class
@@ -297,3 +300,62 @@ getOptionsOrDie = do
 					hPutStr stdout (helpFor helpFlag defs Nothing)
 					exitSuccess
 				Nothing -> return opts
+
+data Subcommand cmdOpts m = Subcommand String [OptionInfo] (TokensFor cmdOpts -> Either String (m ()))
+
+subcommand :: (Options cmdOpts, Options subcmdOpts) => String -> (cmdOpts -> subcmdOpts -> [String] -> m ()) -> Subcommand cmdOpts m
+subcommand name fn = Subcommand name opts checkTokens where
+	opts = optInfosFromOptType fn optionsDefs
+	
+	optInfosFromOptType :: Options subcmdOpts => (cmdOpts -> subcmdOpts -> [String] -> m ()) -> OptionDefinitions subcmdOpts -> [OptionInfo]
+	optInfosFromOptType _ (OptionDefinitions infos _) = infos
+	
+	checkTokens tokens = case optionsParse tokens of
+		Left err -> Left err
+		Right cmdOpts -> case optionsParse (castTokens tokens) of
+			Left err -> Left err
+			Right subcmdOpts -> case tokens of
+				TokensFor _ args -> Right (fn cmdOpts subcmdOpts args)
+
+subcommandInfo :: Subcommand cmdOpts m -> (String, [OptionInfo])
+subcommandInfo (Subcommand name opts _) = (name, opts)
+
+addSubcommands :: [Subcommand cmdOpts m] -> OptionDefinitions cmdOpts -> OptionDefinitions cmdOpts
+addSubcommands subcommands defs = case defs of
+	OptionDefinitions mainOpts subcmdOpts -> OptionDefinitions mainOpts (subcmdOpts ++ map subcommandInfo subcommands)
+
+findSubcmd :: [Subcommand cmdOpts m] -> String -> TokensFor cmdOpts -> Either String (m ())
+findSubcmd subcommands name tokens = subcmd where
+	asoc = [(n, cmd) | cmd@(Subcommand n _ _) <- subcommands]
+	subcmd = case lookup name asoc of
+		Nothing -> Left ("Unknown subcommand: " ++ show name)
+		Just (Subcommand _ _ checkTokens) -> checkTokens tokens
+
+runSubcommands :: (Options cmdOpts, MonadIO m) => [Subcommand cmdOpts m] -> m ()
+runSubcommands subcommands = do
+	args <- liftIO System.Environment.getArgs
+	let defs = addHelpFlags (addSubcommands subcommands optionsDefs)
+	case tokenize defs args of
+		(subcmd, Left err) -> liftIO $ do
+			hPutStr stderr (helpFor HelpSummary defs subcmd)
+			hPutStrLn stderr err
+			exitFailure
+		(Nothing, Right tokens) -> case checkHelpFlag tokens of
+			Just helpFlag -> liftIO $ do
+				hPutStr stdout (helpFor helpFlag defs Nothing)
+				exitSuccess
+			Nothing -> liftIO $ do
+				hPutStr stderr (helpFor HelpSummary defs Nothing)
+				hPutStrLn stderr "No subcommand specified"
+				exitFailure
+		(Just subcmdName, Right tokens) -> do
+			case findSubcmd subcommands subcmdName tokens of
+				Left err -> liftIO $ do
+					hPutStr stderr (helpFor HelpSummary defs (Just subcmdName))
+					hPutStrLn stderr err
+					exitFailure
+				Right io -> case checkHelpFlag tokens of
+					Just helpFlag -> liftIO $ do
+						hPutStr stdout (helpFor helpFlag defs (Just subcmdName))
+						exitSuccess
+					Nothing -> io
