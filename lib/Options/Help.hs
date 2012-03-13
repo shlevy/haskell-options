@@ -23,6 +23,7 @@ import           Language.Haskell.TH (location, loc_package, loc_module)
 import           Options.Types
 
 data HelpFlag = HelpSummary | HelpAll | HelpGroup String
+	deriving (Eq, Show)
 
 addHelpFlags :: OptionDefinitions a -> OptionDefinitions a
 addHelpFlags (OptionDefinitions opts subcmds) = OptionDefinitions withHelp subcmdsWithHelp where
@@ -143,7 +144,6 @@ showOptionHelp info = do
 					tell "\n"
 					tell "    "
 					tell (optionInfoDescription info)
-					tell "\n"
 				else do
 					tell (replicate (28 - length optStringCsv) ' ')
 					tell (optionInfoDescription info)

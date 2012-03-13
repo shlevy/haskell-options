@@ -17,6 +17,7 @@ data GroupInfo = GroupInfo
 	, groupInfoDescription :: String
 	, groupInfoHelpDescription :: String
 	}
+	deriving (Eq, Show)
 
 data OptionInfo = OptionInfo
 	{ optionInfoKey :: String
@@ -27,5 +28,6 @@ data OptionInfo = OptionInfo
 	, optionInfoDescription :: String
 	, optionInfoGroup :: Maybe GroupInfo
 	}
+	deriving (Eq, Show)
 
 data TokensFor a = TokensFor [(String, String)] [String]

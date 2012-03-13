@@ -24,5 +24,6 @@ executable options_tests
     , monads-tf
     , QuickCheck
     , split
+    , template-haskell
     , text
     , transformers

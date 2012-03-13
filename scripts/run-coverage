@@ -19,6 +19,7 @@ cabal-dev/bin/options_tests $@
 
 EXCLUDES="\
 --exclude=OptionsTests \
+--exclude=OptionsTests.Help \
 --exclude=OptionsTests.Tokenize \
 --exclude=Main"
 

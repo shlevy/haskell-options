@@ -9,10 +9,12 @@ module Main
 import           Test.Chell (Suite, defaultMain)
 
 import           OptionsTests.Tokenize (test_Tokenize)
+import           OptionsTests.Help (test_Help)
 
 tests :: [Suite]
 tests =
 	[ test_Tokenize
+	, test_Help
 	]
 
 main :: IO ()
