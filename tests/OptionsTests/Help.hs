@@ -18,8 +18,12 @@ test_Help = suite "help"
 	[ test_AddHelpFlags
 	, test_CheckHelpFlag
 	, test_ShowHelpSummary
+	, test_ShowHelpSummary_Subcommand
 	, test_ShowHelpAll
+	, test_ShowHelpAll_Subcommand
 	, test_ShowHelpGroup
+	, test_ShowHelpGroup_Subcommand
+	, test_ShowHelpGroup_SubcommandInvalid
 	]
 
 test_AddHelpFlags :: Suite
@@ -183,13 +187,26 @@ test_CheckHelpFlag = assertions "checkHelpFlag" $ do
 
 variedOptions :: OptionDefinitions ()
 variedOptions = addHelpFlags $ OptionDefinitions
-	[ OptionInfo "test.a" ['a'] ["long-a"] "def" False "description here" Nothing
+	[ OptionInfo "test.a" ['a'] ["long-a"] "def" False "a description here" Nothing
 	, OptionInfo "test.long1" [] ["a-looooooooooooong-option"] "def" False "description here" Nothing
 	, OptionInfo "test.long2" [] ["a-loooooooooooooong-option"] "def" False "description here" Nothing
-	, OptionInfo "test.b" ['b'] ["long-b"] "def" False "description here" Nothing
+	, OptionInfo "test.b" ['b'] ["long-b"] "def" False "b description here" Nothing
+	, OptionInfo "test.g" ['g'] ["long-g"] "def" False "g description here" (Just GroupInfo
+		{ groupInfoName = "group"
+		, groupInfoDescription = "Grouped options"
+		, groupInfoHelpDescription = "Show grouped options."
+		})
 	]
-	[("cmd1",
-		[ OptionInfo "test.cmd1.z" ['z'] ["long-z"] "def" False "description here" Nothing
+	[ ("cmd1",
+		[ OptionInfo "test.cmd1.z" ['z'] ["long-z"] "def" False "z description here" Nothing
+		])
+	, ("cmd2",
+		[ OptionInfo "test.cmd2.y" ['y'] ["long-y"] "def" False "y description here" Nothing
+		, OptionInfo "test.cmd2.g2" [] ["long-g2"] "def" False "g2 description here" (Just GroupInfo
+			{ groupInfoName = "group"
+			, groupInfoDescription = "Grouped options"
+			, groupInfoHelpDescription = "Show grouped options."
+			})
 		])
 	]
 
@@ -199,18 +216,40 @@ test_ShowHelpSummary = assertions "showHelpSummary" $ do
 	\Help Options:\n\
 	\  -h, --help                  Show option summary.\n\
 	\  --help-all                  Show all help options.\n\
+	\  --help-group                Show grouped options.\n\
 	\\n\
 	\Application Options:\n\
-	\  -a, --long-a                description here\n\
+	\  -a, --long-a                a description here\n\
 	\  --a-looooooooooooong-option description here\n\
 	\  --a-loooooooooooooong-option\n\
 	\    description here\n\
-	\  -b, --long-b                description here\n\
+	\  -b, --long-b                b description here\n\
 	\\n\
 	\Subcommands:\n\
 	\  cmd1\n\
+	\  cmd2\n\
 	\\n"
 	$expect (equalLines expected (helpFor HelpSummary variedOptions Nothing))
+
+test_ShowHelpSummary_Subcommand :: Suite
+test_ShowHelpSummary_Subcommand = assertions "showHelpSummary-subcommand" $ do
+	let expected = "\
+	\Help Options:\n\
+	\  -h, --help                  Show option summary.\n\
+	\  --help-all                  Show all help options.\n\
+	\  --help-group                Show grouped options.\n\
+	\\n\
+	\Application Options:\n\
+	\  -a, --long-a                a description here\n\
+	\  --a-looooooooooooong-option description here\n\
+	\  --a-loooooooooooooong-option\n\
+	\    description here\n\
+	\  -b, --long-b                b description here\n\
+	\\n\
+	\Options for subcommand \"cmd1\":\n\
+	\  -z, --long-z                z description here\n\
+	\\n"
+	$expect (equalLines expected (helpFor HelpSummary variedOptions (Just "cmd1")))
 
 test_ShowHelpAll :: Suite
 test_ShowHelpAll = assertions "showHelpAll" $ do
@@ -218,19 +257,71 @@ test_ShowHelpAll = assertions "showHelpAll" $ do
 	\Help Options:\n\
 	\  -h, --help                  Show option summary.\n\
 	\  --help-all                  Show all help options.\n\
+	\  --help-group                Show grouped options.\n\
+	\\n\
+	\Grouped options:\n\
+	\  -g, --long-g                g description here\n\
 	\\n\
 	\Application Options:\n\
-	\  -a, --long-a                description here\n\
+	\  -a, --long-a                a description here\n\
 	\  --a-looooooooooooong-option description here\n\
 	\  --a-loooooooooooooong-option\n\
 	\    description here\n\
-	\  -b, --long-b                description here\n\
+	\  -b, --long-b                b description here\n\
 	\\n\
 	\Options for subcommand \"cmd1\":\n\
-	\  -z, --long-z                description here\n\
+	\  -z, --long-z                z description here\n\
+	\\n\
+	\Options for subcommand \"cmd2\":\n\
+	\  -y, --long-y                y description here\n\
+	\  --long-g2                   g2 description here\n\
 	\\n"
 	$expect (equalLines expected (helpFor HelpAll variedOptions Nothing))
 
+test_ShowHelpAll_Subcommand :: Suite
+test_ShowHelpAll_Subcommand = assertions "showHelpAll-subcommand" $ do
+	let expected = "\
+	\Help Options:\n\
+	\  -h, --help                  Show option summary.\n\
+	\  --help-all                  Show all help options.\n\
+	\  --help-group                Show grouped options.\n\
+	\\n\
+	\Grouped options:\n\
+	\  -g, --long-g                g description here\n\
+	\\n\
+	\Application Options:\n\
+	\  -a, --long-a                a description here\n\
+	\  --a-looooooooooooong-option description here\n\
+	\  --a-loooooooooooooong-option\n\
+	\    description here\n\
+	\  -b, --long-b                b description here\n\
+	\\n\
+	\Options for subcommand \"cmd1\":\n\
+	\  -z, --long-z                z description here\n\
+	\\n"
+	$expect (equalLines expected (helpFor HelpAll variedOptions (Just "cmd1")))
+
 test_ShowHelpGroup :: Suite
 test_ShowHelpGroup = assertions "showHelpGroup" $ do
-	return ()
+	let expected = "\
+	\Grouped options:\n\
+	\  -g, --long-g                g description here\n\
+	\\n"
+	$expect (equalLines expected (helpFor (HelpGroup "group") variedOptions Nothing))
+
+test_ShowHelpGroup_Subcommand :: Suite
+test_ShowHelpGroup_Subcommand = assertions "showHelpGroup-subcommand" $ do
+	let expected = "\
+	\Grouped options:\n\
+	\  -g, --long-g                g description here\n\
+	\  --long-g2                   g2 description here\n\
+	\\n"
+	$expect (equalLines expected (helpFor (HelpGroup "group") variedOptions (Just "cmd2")))
+
+test_ShowHelpGroup_SubcommandInvalid :: Suite
+test_ShowHelpGroup_SubcommandInvalid = assertions "showHelpGroup-subcommand-invalid" $ do
+	let expected = "\
+	\Grouped options:\n\
+	\  -g, --long-g                g description here\n\
+	\\n"
+	$expect (equalLines expected (helpFor (HelpGroup "group") variedOptions (Just "noexist")))
