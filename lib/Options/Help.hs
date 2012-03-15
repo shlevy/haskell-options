@@ -38,8 +38,8 @@ addHelpFlags (OptionDefinitions opts subcmds) = OptionDefinitions withHelp subcm
 	
 	groupHelp = GroupInfo
 		{ groupInfoName = "all"
-		, groupInfoDescription = "Help Options"
-		, groupInfoHelpDescription = "Show all help options."
+		, groupInfoTitle = "Help Options"
+		, groupInfoDescription = "Show all help options."
 		}
 	
 	optSummary = OptionInfo
@@ -58,7 +58,7 @@ addHelpFlags (OptionDefinitions opts subcmds) = OptionDefinitions withHelp subcm
 		, optionInfoLongFlags = [flag]
 		, optionInfoDefault = "false"
 		, optionInfoUnary = True
-		, optionInfoDescription = groupInfoHelpDescription group
+		, optionInfoDescription = groupInfoDescription group
 		, optionInfoGroup = Just groupHelp
 		}
 	
@@ -216,7 +216,7 @@ showHelpAll (OptionDefinitions mainOpts subcmds) subcmd = do
 
 showHelpGroup :: (GroupInfo, [OptionInfo]) -> Writer String ()
 showHelpGroup (groupInfo, opts) = do
-	tell (groupInfoDescription groupInfo ++ ":\n")
+	tell (groupInfoTitle groupInfo ++ ":\n")
 	forM_ opts showOptionHelp
 	tell "\n"
 

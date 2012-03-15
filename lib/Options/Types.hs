@@ -14,8 +14,8 @@ data OptionDefinitions a = OptionDefinitions [OptionInfo] [(String, [OptionInfo]
 
 data GroupInfo = GroupInfo
 	{ groupInfoName :: String
+	, groupInfoTitle :: String
 	, groupInfoDescription :: String
-	, groupInfoHelpDescription :: String
 	}
 	deriving (Eq, Show)
 

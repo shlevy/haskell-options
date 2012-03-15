@@ -39,8 +39,8 @@ test_AddHelpFlags = suite "addHelpFlags"
 groupInfoHelp :: Maybe GroupInfo
 groupInfoHelp = Just (GroupInfo
 	{ groupInfoName = "all"
-	, groupInfoDescription = "Help Options"
-	, groupInfoHelpDescription = "Show all help options."
+	, groupInfoTitle = "Help Options"
+	, groupInfoDescription = "Show all help options."
 	})
 
 infoHelpSummary :: [Char] -> [String] -> OptionInfo
@@ -142,13 +142,13 @@ test_AddHelpFlags_Subcommand :: Suite
 test_AddHelpFlags_Subcommand = assertions "subcommand" $ do
 	let cmd1_a = OptionInfo "test.cmd1.a" ['a'] [] "" False "" (Just GroupInfo
 		{ groupInfoName = "foo"
-		, groupInfoDescription = "Foo Options"
-		, groupInfoHelpDescription = "More Foo Options"
+		, groupInfoTitle = "Foo Options"
+		, groupInfoDescription = "More Foo Options"
 		})
 	let cmd1_b = OptionInfo "test.cmd1.b" ['b'] [] "" False "" (Just GroupInfo
 		{ groupInfoName = "all"
-		, groupInfoDescription = "All Options"
-		, groupInfoHelpDescription = "More All Options"
+		, groupInfoTitle = "All Options"
+		, groupInfoDescription = "More All Options"
 		})
 	let commandDefs = OptionDefinitions
 		[]
@@ -165,8 +165,8 @@ test_AddHelpFlags_Subcommand = assertions "subcommand" $ do
 		, optionInfoDescription = "More Foo Options" 
 		, optionInfoGroup = Just (GroupInfo
 			{ groupInfoName = "all"
-			, groupInfoDescription = "Help Options"
-			, groupInfoHelpDescription = "Show all help options."
+			, groupInfoTitle = "Help Options"
+			, groupInfoDescription = "Show all help options."
 			})
 		}
 	
@@ -193,8 +193,8 @@ variedOptions = addHelpFlags $ OptionDefinitions
 	, OptionInfo "test.b" ['b'] ["long-b"] "def" False "b description here" Nothing
 	, OptionInfo "test.g" ['g'] ["long-g"] "def" False "g description here" (Just GroupInfo
 		{ groupInfoName = "group"
-		, groupInfoDescription = "Grouped options"
-		, groupInfoHelpDescription = "Show grouped options."
+		, groupInfoTitle = "Grouped options"
+		, groupInfoDescription = "Show grouped options."
 		})
 	]
 	[ ("cmd1",
@@ -204,8 +204,8 @@ variedOptions = addHelpFlags $ OptionDefinitions
 		[ OptionInfo "test.cmd2.y" ['y'] ["long-y"] "def" False "y description here" Nothing
 		, OptionInfo "test.cmd2.g2" [] ["long-g2"] "def" False "g2 description here" (Just GroupInfo
 			{ groupInfoName = "group"
-			, groupInfoDescription = "Grouped options"
-			, groupInfoHelpDescription = "Show grouped options."
+			, groupInfoTitle = "Grouped options"
+			, groupInfoDescription = "Show grouped options."
 			})
 		])
 	]
