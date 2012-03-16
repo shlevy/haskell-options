@@ -3,8 +3,6 @@
 -- |
 -- Module: Options.Help
 -- License: MIT
---
--- TODO: documentation here
 module Options.Help
 	( addHelpFlags
 	, checkHelpFlag

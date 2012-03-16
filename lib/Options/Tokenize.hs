@@ -3,8 +3,6 @@
 -- |
 -- Module: Options.Tokenize
 -- License: MIT
---
--- TODO: documentation here
 module Options.Tokenize
 	( tokenize
 	) where

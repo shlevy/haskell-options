@@ -1,8 +1,6 @@
 -- |
 -- Module: Options.Types
 -- License: MIT
---
--- TODO: documentation here
 module Options.Types
 	( OptionDefinitions(..)
 	, GroupInfo(..)

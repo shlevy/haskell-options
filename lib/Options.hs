@@ -118,7 +118,7 @@ import           Options.Help
 -- defined options.
 class Options a where
 	optionsDefs :: OptionDefinitions a
-	optionsParse :: TokensFor a -> Either String a -- TODO: OptionError
+	optionsParse :: TokensFor a -> Either String a
 
 -- | An option's type determines how the option will be parsed, and which
 -- Haskell type the parsed value will be stored as. There are many types
@@ -318,7 +318,7 @@ defineOptions rawName optionsM = do
 getOptionsDefs :: [(Name, Type, Q Exp, Q Exp)] -> Q Exp
 getOptionsDefs fields = do
 	infoExps <- forM fields (\(_, _, infoExp, _) -> infoExp)
-	[| OptionDefinitions (concat $(return (ListE infoExps))) [] |] -- TODO: subcommands
+	[| OptionDefinitions (concat $(return (ListE infoExps))) [] |]
 
 getOptionsParse :: Name -> [(Name, Type, Q Exp, Q Exp)] -> Q Exp
 getOptionsParse dataName fields = do
@@ -558,7 +558,6 @@ getOptionsOrDie = do
 	args <- liftIO System.Environment.getArgs
 	let defs = addHelpFlags optionsDefs
 	case tokenize defs args of
-		-- TODO: subcommands
 		(_, Left err) -> liftIO $ do
 			hPutStr stderr (helpFor HelpSummary defs Nothing)
 			hPutStrLn stderr err
