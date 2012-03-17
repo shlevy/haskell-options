@@ -384,15 +384,9 @@ split sep s0 = loop s0 where
 		cont = chunk : loop (tail rest)
 		in if null rest then [chunk] else cont
 
--- | Store an option as one of a set of enumerated constructors. The option
--- type must be defined in a separate file, otherwise the compiler will be
--- unable to use it when defining options.
+-- | Store an option as one of a set of enumerated constructors.
 --
--- >-- MyApp.Types.hs
 -- >data Mode = ModeFoo | ModeBar
---
--- >-- Main.hs
--- >import MyApp.Types
 -- >
 -- >defineOptions "MainOptions" $ do
 -- >    option "optMode" (\o -> o
