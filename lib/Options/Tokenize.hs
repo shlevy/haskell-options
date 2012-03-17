@@ -108,7 +108,7 @@ parseLong optName = do
 			_ -> case Data.Map.lookup optName longKeys of
 				Nothing -> throwError ("Unknown option: --" ++ optName)
 				Just (key, unary) -> if unary
-					then addOpt ("--" ++ optName) key ""
+					then addOpt ("--" ++ optName) key "true"
 					else do
 						next <- nextItem
 						case next of
@@ -123,7 +123,7 @@ parseShort optChar optValue = do
 		Nothing -> throwError ("Unknown option: " ++ optName)
 		Just (key, unary) -> if unary
 			then do
-				addOpt optName key ""
+				addOpt optName key "true"
 				case optValue of
 					[] -> return ()
 					nextChar:nextValue -> parseShort nextChar nextValue

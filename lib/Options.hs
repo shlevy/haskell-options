@@ -178,7 +178,6 @@ optionTypeBool :: OptionType Bool
 optionTypeBool = OptionType (ConT ''Bool) True [| \s -> case s of
 	-- Use list notation so GHC 7.0 won't emit bogus warnings when the
 	-- module defining options has an OverloadedStrings pragma.
-	[] -> Right True
 	['t', 'r', 'u', 'e'] -> Right True
 	['f', 'a', 'l', 's', 'e'] -> Right False
 	-- TODO: include option flag
