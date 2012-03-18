@@ -406,28 +406,38 @@ split sep s0 = loop s0 where
 		cont = chunk : loop (tail rest)
 		in if null rest then [chunk] else cont
 
--- | Store an option as one of a set of enumerated constructors.
+-- | Store an option as one of a set of enumerated values. The option
+-- type must be defined in a separate file.
+--
+-- >-- MyApp/Types.hs
+-- >data Mode = ModeFoo | ModeBar
+-- >    deriving (Enum)
 --
 -- @
---data Mode = ModeFoo | ModeBar
+--\-- Main.hs
+--import MyApp.Types
 --
 --'defineOptions' \"MainOptions\" $ do
 --    'option' \"optMode\" (\\o -> o
 --        { 'optionLongFlags' = [\"mode\"]
 --        , 'optionDefault' = \"foo\"
 --        , 'optionType' = 'optionTypeEnum' ''Mode
---            [ (\"foo\", 'ModeFoo)
---            , (\"bar\", 'ModeBar)
+--            [ (\"foo\", ModeFoo)
+--            , (\"bar\", ModeBar)
 --            ]
 --        })
 -- @
-optionTypeEnum :: Name -> [(String, Name)] -> OptionType a
-optionTypeEnum typeName values =
-	-- TODO: check whether vName is a valid constructor name, and use either ConE or VarE
-	let qExprs = return (ListE [TupE [LitE (StringL key), ConE vName] | (key, vName) <- values]) in
+--
+-- >$./app
+-- >Running in mode ModeFoo
+-- >$./app --mode=bar
+-- >Running in mode ModeBar
+optionTypeEnum :: Enum a => Name -> [(String, a)] -> OptionType a
+optionTypeEnum typeName values = do
+	let intlist = [(k, fromEnum v) | (k, v) <- values]
 	OptionType (ConT typeName) False
-		[| let exprs = $qExprs in \s -> case lookup s exprs of
-			Just v -> Right v
+		[| \s -> case lookup s intlist of
+			Just v -> Right (toEnum v)
 			-- TODO: include option flag and available values
 			Nothing -> Left ("invalid enum value: " ++ show s) |]
 
