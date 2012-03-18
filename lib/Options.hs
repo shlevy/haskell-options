@@ -414,7 +414,7 @@ split sep s0 = loop s0 where
 -- >    deriving (Enum)
 --
 -- @
---\-- Main.hs
+-- -- Main.hs
 --import MyApp.Types
 --
 --'defineOptions' \"MainOptions\" $ do
