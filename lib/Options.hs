@@ -10,23 +10,24 @@
 -- The following example is a full program that can accept two options,
 -- @--message@ and @--quiet@:
 --
--- >{-# LANGUAGE TemplateHaskell #-}
--- >
--- >import Options
--- >
--- >defineOptions "MainOptions" $ do
--- >    stringOption "optMessage" "message" "Hello world!"
--- >      "A message to show the user."
--- >
--- >    boolOption "optQuiet" "quiet" False
--- >      "Whether to be quiet."
--- >
--- >main :: IO ()
--- >main = do
--- >    opts <- getOptionsOrDie
--- >    if optQuiet opts
--- >        then return ()
--- >        else putStrLn (optMessage opts)
+-- @
+--{-\# LANGUAGE TemplateHaskell \#-}
+--
+--import Options
+--
+--'defineOptions' \"MainOptions\" $ do
+--    'stringOption' \"optMessage\" \"message\" \"Hello world!\"
+--        \"A message to show the user.\"
+--    'boolOption' \"optQuiet\" \"quiet\" False
+--        \"Whether to be quiet.\"
+--
+--main :: IO ()
+--main = do
+--    opts <- 'getOptionsOrDie'
+--    if optQuiet opts
+--        then return ()
+--        else putStrLn (optMessage opts)
+-- @
 --
 -- >$ ./hello
 -- >Hello world!
@@ -310,11 +311,13 @@ optionTypeDouble = OptionType (ConT ''Double) False [| parseFloat "double" |]
 -- The separator should be a character that will not occur within the values,
 -- such as a comma or semicolon.
 --
--- >option "optNames" (\o -> o
--- >    { optionLongFlags = ["names"]
--- >    , optionDefault = "Alice;Bob;Charles"
--- >    , optionType = optionTypeList ';' optionTypeString
--- >    })
+-- @
+--'option' \"optNames\" (\\o -> o
+--    { 'optionLongFlags' = [\"names\"]
+--    , 'optionDefault' = \"Alice;Bob;Charles\"
+--    , 'optionType' = 'optionTypeList' \';\' 'optionTypeString'
+--    })
+-- @
 optionTypeList :: Char -- ^ Element separator
                -> OptionType a -- ^ Element type
                -> OptionType [a]
@@ -326,11 +329,13 @@ optionTypeList sep (OptionType valType _ valParseExp) = OptionType (AppT ListT v
 --
 -- Duplicate elements in the input are permitted.
 --
--- >option "optNames" (\o -> o
--- >    { optionLongFlags = ["names"]
--- >    , optionDefault = "Alice;Bob;Charles"
--- >    , optionType = optionTypeSet ';' optionTypeString
--- >    })
+-- @
+--'option' \"optNames\" (\\o -> o
+--    { 'optionLongFlags' = [\"names\"]
+--    , 'optionDefault' = \"Alice;Bob;Charles\"
+--    , 'optionType' = 'optionTypeSet' \';\' 'optionTypeString'
+--    })
+-- @
 optionTypeSet :: Ord a
               => Char -- ^ Element separator
               -> OptionType a -- ^ Element type
@@ -350,11 +355,13 @@ optionTypeSet sep (OptionType valType _ valParseExp) = OptionType (AppT (ConT ''
 -- Duplicate keys in the input are permitted. The final value for each key is
 -- stored.
 --
--- >option "optNames" (\o -> o
--- >    { optionLongFlags = ["names"]
--- >    , optionDefault = "name=Alice;hometown=Bucharest"
--- >    , optionType = optionTypeMap ';' '=' optionTypeString optionTypeString
--- >    })
+-- @
+--'option' \"optNames\" (\\o -> o
+--    { 'optionLongFlags' = [\"names\"]
+--    , 'optionDefault' = \"name=Alice;hometown=Bucharest\"
+--    , 'optionType' = 'optionTypeMap' \';\' \'=\' 'optionTypeString' 'optionTypeString'
+--    })
+-- @
 optionTypeMap :: Ord k
               => Char -- ^ Item separator
               -> Char -- ^ Key/Value separator
@@ -401,17 +408,19 @@ split sep s0 = loop s0 where
 
 -- | Store an option as one of a set of enumerated constructors.
 --
--- >data Mode = ModeFoo | ModeBar
--- >
--- >defineOptions "MainOptions" $ do
--- >    option "optMode" (\o -> o
--- >        { optionLongFlags = ["mode"]
--- >        , optionDefault = "foo"
--- >        , optionType = optionTypeEnum ''Mode
--- >            [ ("foo", 'ModeFoo)
--- >            , ("bar", 'ModeBar)
--- >            ]
--- >        })
+-- @
+--data Mode = ModeFoo | ModeBar
+--
+--'defineOptions' \"MainOptions\" $ do
+--    'option' \"optMode\" (\\o -> o
+--        { 'optionLongFlags' = [\"mode\"]
+--        , 'optionDefault' = \"foo\"
+--        , 'optionType' = 'optionTypeEnum' ''Mode
+--            [ (\"foo\", 'ModeFoo)
+--            , (\"bar\", 'ModeBar)
+--            ]
+--        })
+-- @
 optionTypeEnum :: Name -> [(String, Name)] -> OptionType a
 optionTypeEnum typeName values =
 	-- TODO: check whether vName is a valid constructor name, and use either ConE or VarE
@@ -482,9 +491,11 @@ runOptionsM loc (OptionsM m) = execWriter (runReaderT m loc)
 --
 -- Example: this use of @defineOptions@:
 --
--- >defineOptions "MainOptions" $ do
--- >    stringOption "optMessage" "message" "Hello world!" ""
--- >    boolOption "optQuiet" "quiet" False ""
+-- @
+--'defineOptions' \"MainOptions\" $ do
+--    'stringOption' \"optMessage\" \"message\" \"Hello world!\" \"\"
+--    'boolOption' \"optQuiet\" \"quiet\" False \"\"
+-- @
 --
 -- expands to the following definition:
 --
@@ -563,11 +574,13 @@ putOptionDecl name qtype infoExp parseExp = OptionsM (tell [(name, qtype, infoEx
 -- may be /short/ or /long/. See 'optionShortFlags' and 'optionLongFlags' for
 -- details.
 --
--- >option "optFoo" (\o -> o
--- >    { optionLongFlags = ["names"]
--- >    , optionDefault = "Alice;Bob;Charles"
--- >    , optionType = optionTypeList ';' optionTypeString
--- >    }
+-- @
+--'option' \"optFoo\" (\\o -> o
+--    { 'optionLongFlags' = [\"names\"]
+--    , 'optionDefault' = \"Alice;Bob;Charles\"
+--    , 'optionType' = 'optionTypeList' \';\' 'optionTypeString'
+--    }
+-- @
 option :: String -- ^ Field name
        -> (Option String -> Option a) -- ^ Option definition
        -> OptionsM ()
@@ -634,31 +647,35 @@ parseOptionTok key p def = do
 -- in third-party libraries. For example, the author of the \"foo\" library
 -- would define and export @FooOptions@:
 --
--- >module Foo (FooOptions, foo) where
--- >
--- >import Options
--- >
--- >defineOptions "FooOptions" $ do
--- >    boolOption "optFrob" "frob" True "Enable frobnication."
--- >
--- >foo :: FooOptions -> IO ()
+-- @
+--module Foo (FooOptions, foo) where
+--
+--import Options
+--
+--'defineOptions' \"FooOptions\" $ do
+--    'boolOption' \"optFrob\" \"frob\" True \"Enable frobnication.\"
+--
+--foo :: FooOptions -> IO ()
+-- @
 --
 -- and the author of an application would use @options@ to let users specify
 -- @--frob@:
 --
--- >module Main where
--- >
--- >import Options
--- >import Foo
--- >
--- >defineOptions "MainOptions" $ do
--- >   boolOption "optVerbose" "verbose" False "Be really loud."
--- >   options "optFoo" ''FooOptions
--- >
--- >main :: IO ()
--- >main = do
--- >    opts <- getOptionsOrDie
--- >    foo (optFoo opts)
+-- @
+--module Main where
+--
+--import Options
+--import Foo
+--
+--'defineOptions' \"MainOptions\" $ do
+--   'boolOption' \"optVerbose\" \"verbose\" False \"Be really loud.\"
+--   'options' \"optFoo\" \'\'FooOptions
+--
+--main :: IO ()
+--main = do
+--    opts <- 'getOptionsOrDie'
+--    foo (optFoo opts)
+-- @
 --
 -- Use of 'options' may be arbitrarily nested. Library authors are encouraged
 -- to aggregate their options into a single top-level type, so application
@@ -1044,28 +1061,30 @@ parseSubcommand subcommands args = parsed where
 -- 'exitFailure'. In handling of invalid flags or @--help@, 'runSubcommand'
 -- acts like 'getOptionsOrDie'.
 --
--- >defineOptions "MainOptions" $ do
--- >    boolOption "optQuiet" "quiet" False "Whether to be quiet."
--- >
--- >defineOptions "HelloOpts" $ do
--- >    stringOption "optHello" "hello" "Hello!" "How to say hello."
--- >
--- >defineOptions "ByeOpts" $ do
--- >    stringOption "optName" "name" "" "The user's name."
--- >
--- >hello :: MainOptions -> HelloOpts -> [String] -> IO ()
--- >hello mainOpts opts args = unless (optQuiet mainOpts) $ do
--- >    putStrLn (optHello opts)
--- >
--- >bye :: MainOptions -> ByeOpts -> [String] -> IO ()
--- >bye mainOpts opts args = unless (optQuiet mainOpts) $ do
--- >    putStrLn ("Good bye " ++ optName opts)
--- >
--- >main :: IO ()
--- >main = runSubcommands
--- >    [ subcommand "hello" hello
--- >    , subcommand "bye" bye
--- >    ]
+-- @
+--'defineOptions' \"MainOptions\" $ do
+--    'boolOption' \"optQuiet\" \"quiet\" False \"Whether to be quiet.\"
+--
+--'defineOptions' \"HelloOpts\" $ do
+--    stringOption \"optHello\" \"hello\" \"Hello!\" \"How to say hello.\"
+--
+--'defineOptions' \"ByeOpts\" $ do
+--    'stringOption' \"optName\" \"name\" \"\" \"The user's name.\"
+--
+--hello :: MainOptions -> HelloOpts -> [String] -> IO ()
+--hello mainOpts opts args = unless (optQuiet mainOpts) $ do
+--    putStrLn (optHello opts)
+--
+--bye :: MainOptions -> ByeOpts -> [String] -> IO ()
+--bye mainOpts opts args = unless (optQuiet mainOpts) $ do
+--    putStrLn (\"Good bye \" ++ optName opts)
+--
+--main :: IO ()
+--main = 'runSubcommand'
+--    [ 'subcommand' \"hello\" hello
+--    , 'subcommand' \"bye\" bye
+--    ]
+-- @
 --
 -- >$ ./app hello
 -- >Hello!
