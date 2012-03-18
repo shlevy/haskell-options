@@ -942,7 +942,7 @@ parsedHelp = parsedHelp_
 --        Just opts -> return opts
 --        Nothing -> case 'parsedError' parsed of
 --            Just err -> do
---                hPutStr stderr ('parsedHelp' parsed)
+--                hPutStrLn stderr ('parsedHelp' parsed)
 --                hPutStrLn stderr err
 --                exitFailure
 --            Nothing -> do
@@ -980,7 +980,7 @@ getOptionsOrDie = do
 		Just opts -> return opts
 		Nothing -> liftIO $ case parsedError parsed of
 			Just err -> do
-				hPutStr stderr (parsedHelp parsed)
+				hPutStrLn stderr (parsedHelp parsed)
 				hPutStrLn stderr err
 				exitFailure
 			Nothing -> do
@@ -1040,7 +1040,7 @@ findSubcmd subcommands name tokens = subcmd where
 --        Just cmd -> cmd
 --        Nothing -> case 'parsedError' parsed of
 --            Just err -> do
---                hPutStr stderr ('parsedHelp' parsed)
+--                hPutStrLn stderr ('parsedHelp' parsed)
 --                hPutStrLn stderr err
 --                exitFailure
 --            Nothing -> do
@@ -1112,7 +1112,7 @@ runSubcommand subcommands = do
 		Just cmd -> cmd
 		Nothing -> liftIO $ case parsedError parsed of
 			Just err -> do
-				hPutStr stderr (parsedHelp parsed)
+				hPutStrLn stderr (parsedHelp parsed)
 				hPutStrLn stderr err
 				exitFailure
 			Nothing -> do
