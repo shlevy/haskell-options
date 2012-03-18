@@ -181,15 +181,15 @@ data OptionType a = OptionType Type Bool (Q Exp)
 -- specified on the command line. If a flag is present, the option is set to
 -- True.
 --
--- >./app -q
--- >./app --quiet
+-- >$ ./app -q
+-- >$ ./app --quiet
 --
 -- Boolean options may still be specified explicitly by using long flags with
 -- the @--flag=value@ format. This is the only way to set a unary flag to
 -- @\"false\"@.
 --
--- >./app --quiet=true
--- >./app --quiet=false
+-- >$ ./app --quiet=true
+-- >$ ./app --quiet=false
 optionTypeBool :: OptionType Bool
 optionTypeBool = OptionType (ConT ''Bool) True [| \s -> case s of
 	-- Use list notation so GHC 7.0 won't emit bogus warnings when the
@@ -428,9 +428,9 @@ split sep s0 = loop s0 where
 --        })
 -- @
 --
--- >$./app
+-- >$ ./app
 -- >Running in mode ModeFoo
--- >$./app --mode=bar
+-- >$ ./app --mode=bar
 -- >Running in mode ModeBar
 optionTypeEnum :: Enum a => Name -> [(String, a)] -> OptionType a
 optionTypeEnum typeName values = do
@@ -451,8 +451,8 @@ data Option a = Option
 	--
 	-- Example: An option with @optionShortFlags = [\'n\']@ may be set using:
 	--
-	-- >./app -n John
-	-- >./app -nJohn
+	-- >$ ./app -n John
+	-- >$ ./app -nJohn
 	  optionShortFlags :: [Char]
 	
 	-- | Long flags are multiple characters. When entered by a user, they
@@ -463,8 +463,8 @@ data Option a = Option
 	--
 	-- Example: An option with @optionLongFlags = [\"name\"]@ may be set using:
 	--
-	-- >./app --name John
-	-- >./app --name=John
+	-- >$ ./app --name John
+	-- >$ ./app --name=John
 	, optionLongFlags :: [String]
 	
 	-- | Options may have a default value. This will be parsed as if the
