@@ -848,16 +848,16 @@ getOptionsOrDie = do
 			hPutStr stderr (helpFor HelpSummary defs Nothing)
 			hPutStrLn stderr err
 			exitFailure
-		(_, Right tokens) -> case optionsParse tokens of
-			Left err -> liftIO $ do
-				hPutStr stderr (helpFor HelpSummary defs Nothing)
-				hPutStrLn stderr err
-				exitFailure
-			Right opts -> case checkHelpFlag tokens of
-				Just helpFlag -> liftIO $ do
-					hPutStr stdout (helpFor helpFlag defs Nothing)
-					exitSuccess
-				Nothing -> return opts
+		(_, Right tokens) -> case checkHelpFlag tokens of
+			Just helpFlag -> liftIO $ do
+				hPutStr stdout (helpFor helpFlag defs Nothing)
+				exitSuccess
+			Nothing -> case optionsParse tokens of
+				Left err -> liftIO $ do
+					hPutStr stderr (helpFor HelpSummary defs Nothing)
+					hPutStrLn stderr err
+					exitFailure
+				Right opts -> return opts
 
 -- | See 'runSubcommand'.
 data Subcommand cmdOpts m = Subcommand String [OptionInfo] (TokensFor cmdOpts -> Either String (m ()))
