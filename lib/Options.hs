@@ -121,6 +121,13 @@ module Options
 	, Subcommand
 	, subcommand
 	, runSubcommand
+	
+	-- * Option Parsing
+	, Parsed
+	, parseOptions
+	, parsedOptions
+	, parsedError
+	, parsedHelp
 	) where
 
 import           Control.Monad.IO.Class
@@ -828,6 +835,75 @@ group name f = f (Group
 	, groupDescription = ""
 	})
 
+-- | The result of parsing argv; see @'parseOptions'@.
+data Parsed a = Parsed (Maybe a) (Maybe String) String
+
+-- | Get the options value that was parsed from argv, or @Nothing@ if the
+-- arguments could not be converted into options.
+--
+-- Note: This function return @Nothing@ if the user provided a help flag. To
+-- check whether an error occured during parsing, check the value of
+-- @'parsedError'@.
+parsedOptions :: Parsed a -> Maybe a
+parsedOptions (Parsed x _ _) = x
+
+-- | Get the error that prevented options from being parsed from argv, or
+-- @Nothing@ if no error was detected.
+--
+-- Note: This function return @Nothing@ if the user provided a help flag. To
+-- check whether the arguments could be converted into options, check the
+-- value of @'parsedOptions'@.
+parsedError :: Parsed a -> Maybe String
+parsedError (Parsed _ x _) = x
+
+-- | Get a help message to show the user. If the arguments included a help
+-- flag, this will be a message appropriate to that flag. Otherwise, it is
+-- a summary (equivalent to @--help@).
+--
+-- This is always a non-empty string, regardless of whether the parse
+-- succeeded or failed. If you need to perform additional validation on the
+-- options value, this message can be displayed if validation fails.
+parsedHelp :: Parsed a -> String
+parsedHelp (Parsed _ _ x) = x
+
+-- | Attempt to convert a list of command-line arguments into an options
+-- value. This can be used by application developers who want finer control
+-- over error handling, or who want to perform additional validation on the
+-- options value.
+--
+-- Use @'parsedOptions'@, @'parsedError'@, and @'parsedHelp'@ to inspect the
+-- result of @'parseOptions'@.
+--
+-- Example:
+--
+-- @
+--getOptionsOrDie :: Options a) => IO a
+--getOptionsOrDie = do
+--    args <- System.Environment.getArgs
+--    let parsed = 'parseOptions' args
+--    case 'parsedOptions' parsed of
+--        Just opts -> return opts
+--        Nothing -> case 'parsedError' parsed of
+--            Just err -> do
+--                hPutStr stderr ('parsedHelp' parsed)
+--                hPutStrLn stderr err
+--                exitSuccess
+--            Nothing -> do
+--                hPutStr stdout ('parsedHelp' parsed)
+--                exitSuccess
+-- @
+parseOptions :: Options a => [String] -> Parsed a
+parseOptions args = parsed where
+	defs = addHelpFlags optionsDefs
+	help flag = helpFor flag defs Nothing
+	parsed = case tokenize defs args of
+		(_, Left err) -> Parsed Nothing (Just err) (help HelpSummary)
+		(_, Right tokens) -> case checkHelpFlag tokens of
+			Just helpFlag -> Parsed Nothing Nothing (help helpFlag)
+			Nothing -> case optionsParse tokens of
+				Left err -> Parsed Nothing (Just err) (help HelpSummary)
+				Right opts -> Parsed (Just opts) Nothing (help HelpSummary)
+
 -- | Retrieve 'System.Environment.getArgs', and attempt to parse it into a
 -- valid value of an 'Options' type.
 --
@@ -842,22 +918,17 @@ group name f = f (Group
 getOptionsOrDie :: (MonadIO m, Options a) => m a
 getOptionsOrDie = do
 	args <- liftIO System.Environment.getArgs
-	let defs = addHelpFlags optionsDefs
-	case tokenize defs args of
-		(_, Left err) -> liftIO $ do
-			hPutStr stderr (helpFor HelpSummary defs Nothing)
-			hPutStrLn stderr err
-			exitFailure
-		(_, Right tokens) -> case checkHelpFlag tokens of
-			Just helpFlag -> liftIO $ do
-				hPutStr stdout (helpFor helpFlag defs Nothing)
+	let parsed = parseOptions args
+	case parsedOptions parsed of
+		Just opts -> return opts
+		Nothing -> liftIO $ case parsedError parsed of
+			Just err -> do
+				hPutStr stderr (parsedHelp parsed)
+				hPutStrLn stderr err
 				exitSuccess
-			Nothing -> case optionsParse tokens of
-				Left err -> liftIO $ do
-					hPutStr stderr (helpFor HelpSummary defs Nothing)
-					hPutStrLn stderr err
-					exitFailure
-				Right opts -> return opts
+			Nothing -> do
+				hPutStr stdout (parsedHelp parsed)
+				exitSuccess
 
 -- | See 'runSubcommand'.
 data Subcommand cmdOpts m = Subcommand String [OptionInfo] (TokensFor cmdOpts -> Either String (m ()))
