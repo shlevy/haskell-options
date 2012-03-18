@@ -122,12 +122,20 @@ module Options
 	, subcommand
 	, runSubcommand
 	
-	-- * Option Parsing
+	-- * Argument Parsing
 	, Parsed
-	, parseOptions
-	, parsedOptions
 	, parsedError
 	, parsedHelp
+	
+	-- ** Options
+	, ParsedOptions
+	, parsedOptions
+	, parseOptions
+	
+	-- ** Subcommands
+	, ParsedSubcommand
+	, parsedSubcommand
+	, parseSubcommand
 	) where
 
 import           Control.Monad.IO.Class
@@ -835,8 +843,24 @@ group name f = f (Group
 	, groupDescription = ""
 	})
 
--- | The result of parsing argv; see @'parseOptions'@.
-data Parsed a = Parsed (Maybe a) (Maybe String) String
+-- | See @'parseOptions'@ and @'parseSubcommand'@.
+class Parsed a where
+	parsedError_ :: a -> Maybe String
+	parsedHelp_ :: a -> String
+
+-- | See @'parseOptions'@.
+data ParsedOptions opts = ParsedOptions (Maybe opts) (Maybe String) String
+
+-- | See @'parseSubcommand'@.
+data ParsedSubcommand action = ParsedSubcommand (Maybe action) (Maybe String) String
+
+instance Parsed (ParsedOptions a) where
+	parsedError_ (ParsedOptions _ x _) = x
+	parsedHelp_ (ParsedOptions _ _ x) = x
+
+instance Parsed (ParsedSubcommand a) where
+	parsedError_ (ParsedSubcommand _ x _) = x
+	parsedHelp_ (ParsedSubcommand _ _ x) = x
 
 -- | Get the options value that was parsed from argv, or @Nothing@ if the
 -- arguments could not be converted into options.
@@ -844,27 +868,33 @@ data Parsed a = Parsed (Maybe a) (Maybe String) String
 -- Note: This function return @Nothing@ if the user provided a help flag. To
 -- check whether an error occured during parsing, check the value of
 -- @'parsedError'@.
-parsedOptions :: Parsed a -> Maybe a
-parsedOptions (Parsed x _ _) = x
+parsedOptions :: ParsedOptions opts -> Maybe opts
+parsedOptions (ParsedOptions x _ _) = x
 
--- | Get the error that prevented options from being parsed from argv, or
--- @Nothing@ if no error was detected.
+-- | Get the subcommand action that was parsed from argv, or @Nothing@ if the
+-- arguments could not be converted into a valid action.
 --
 -- Note: This function return @Nothing@ if the user provided a help flag. To
--- check whether the arguments could be converted into options, check the
--- value of @'parsedOptions'@.
-parsedError :: Parsed a -> Maybe String
-parsedError (Parsed _ x _) = x
+-- check whether an error occured during parsing, check the value of
+-- @'parsedError'@.
+parsedSubcommand :: ParsedSubcommand action -> Maybe action
+parsedSubcommand (ParsedSubcommand x _ _) = x
 
--- | Get a help message to show the user. If the arguments included a help
--- flag, this will be a message appropriate to that flag. Otherwise, it is
--- a summary (equivalent to @--help@).
+-- | Get the error that prevented options from being parsed from argv,
+-- or @Nothing@ if no error was detected.
+parsedError :: Parsed a => a -> Maybe String
+parsedError = parsedError_
+
+-- | Get a help message to show the user. If the arguments included
+-- a help flag, this will be a message appropriate to that flag.
+-- Otherwise, it is a summary (equivalent to @--help@).
 --
 -- This is always a non-empty string, regardless of whether the parse
--- succeeded or failed. If you need to perform additional validation on the
--- options value, this message can be displayed if validation fails.
-parsedHelp :: Parsed a -> String
-parsedHelp (Parsed _ _ x) = x
+-- succeeded or failed. If you need to perform additional validation
+-- on the options value, this message can be displayed if validation
+-- fails.
+parsedHelp :: Parsed a => a -> String
+parsedHelp = parsedHelp_
 
 -- | Attempt to convert a list of command-line arguments into an options
 -- value. This can be used by application developers who want finer control
@@ -877,7 +907,7 @@ parsedHelp (Parsed _ _ x) = x
 -- Example:
 --
 -- @
---getOptionsOrDie :: Options a) => IO a
+--getOptionsOrDie :: Options a => IO a
 --getOptionsOrDie = do
 --    args <- System.Environment.getArgs
 --    let parsed = 'parseOptions' args
@@ -887,22 +917,22 @@ parsedHelp (Parsed _ _ x) = x
 --            Just err -> do
 --                hPutStr stderr ('parsedHelp' parsed)
 --                hPutStrLn stderr err
---                exitSuccess
+--                exitFailure
 --            Nothing -> do
 --                hPutStr stdout ('parsedHelp' parsed)
 --                exitSuccess
 -- @
-parseOptions :: Options a => [String] -> Parsed a
+parseOptions :: Options opts => [String] -> ParsedOptions opts
 parseOptions args = parsed where
 	defs = addHelpFlags optionsDefs
 	help flag = helpFor flag defs Nothing
 	parsed = case tokenize defs args of
-		(_, Left err) -> Parsed Nothing (Just err) (help HelpSummary)
+		(_, Left err) -> ParsedOptions Nothing (Just err) (help HelpSummary)
 		(_, Right tokens) -> case checkHelpFlag tokens of
-			Just helpFlag -> Parsed Nothing Nothing (help helpFlag)
+			Just helpFlag -> ParsedOptions Nothing Nothing (help helpFlag)
 			Nothing -> case optionsParse tokens of
-				Left err -> Parsed Nothing (Just err) (help HelpSummary)
-				Right opts -> Parsed (Just opts) Nothing (help HelpSummary)
+				Left err -> ParsedOptions Nothing (Just err) (help HelpSummary)
+				Right opts -> ParsedOptions (Just opts) Nothing (help HelpSummary)
 
 -- | Retrieve 'System.Environment.getArgs', and attempt to parse it into a
 -- valid value of an 'Options' type.
@@ -925,23 +955,23 @@ getOptionsOrDie = do
 			Just err -> do
 				hPutStr stderr (parsedHelp parsed)
 				hPutStrLn stderr err
-				exitSuccess
+				exitFailure
 			Nothing -> do
 				hPutStr stdout (parsedHelp parsed)
 				exitSuccess
 
 -- | See 'runSubcommand'.
-data Subcommand cmdOpts m = Subcommand String [OptionInfo] (TokensFor cmdOpts -> Either String (m ()))
+data Subcommand cmdOpts action = Subcommand String [OptionInfo] (TokensFor cmdOpts -> Either String action)
 
 -- | See 'runSubcommand'.
 subcommand :: (Options cmdOpts, Options subcmdOpts)
            => String -- ^ The subcommand name.
-           -> (cmdOpts -> subcmdOpts -> [String] -> m ()) -- ^ The action to run.
-           -> Subcommand cmdOpts m
+           -> (cmdOpts -> subcmdOpts -> [String] -> action) -- ^ The action to run.
+           -> Subcommand cmdOpts action
 subcommand name fn = Subcommand name opts checkTokens where
 	opts = optInfosFromOptType fn optionsDefs
 	
-	optInfosFromOptType :: Options subcmdOpts => (cmdOpts -> subcmdOpts -> [String] -> m ()) -> OptionDefinitions subcmdOpts -> [OptionInfo]
+	optInfosFromOptType :: Options subcmdOpts => (cmdOpts -> subcmdOpts -> [String] -> action) -> OptionDefinitions subcmdOpts -> [OptionInfo]
 	optInfosFromOptType _ (OptionDefinitions infos _) = infos
 	
 	checkTokens tokens = case optionsParse tokens of
@@ -951,19 +981,60 @@ subcommand name fn = Subcommand name opts checkTokens where
 			Right subcmdOpts -> case tokens of
 				TokensFor _ args -> Right (fn cmdOpts subcmdOpts args)
 
-subcommandInfo :: Subcommand cmdOpts m -> (String, [OptionInfo])
+subcommandInfo :: Subcommand cmdOpts action -> (String, [OptionInfo])
 subcommandInfo (Subcommand name opts _) = (name, opts)
 
-addSubcommands :: [Subcommand cmdOpts m] -> OptionDefinitions cmdOpts -> OptionDefinitions cmdOpts
+addSubcommands :: [Subcommand cmdOpts action] -> OptionDefinitions cmdOpts -> OptionDefinitions cmdOpts
 addSubcommands subcommands defs = case defs of
 	OptionDefinitions mainOpts subcmdOpts -> OptionDefinitions mainOpts (subcmdOpts ++ map subcommandInfo subcommands)
 
-findSubcmd :: [Subcommand cmdOpts m] -> String -> TokensFor cmdOpts -> Either String (m ())
+findSubcmd :: [Subcommand cmdOpts action] -> String -> TokensFor cmdOpts -> Either String action
 findSubcmd subcommands name tokens = subcmd where
 	asoc = [(n, cmd) | cmd@(Subcommand n _ _) <- subcommands]
 	subcmd = case lookup name asoc of
 		Nothing -> Left ("Unknown subcommand: " ++ show name)
 		Just (Subcommand _ _ checkTokens) -> checkTokens tokens
+
+-- | Attempt to convert a list of command-line arguments into a subcommand
+-- action. This can be used by application developers who want finer control
+-- over error handling, or who want subcommands that run in an unusual monad.
+--
+-- Use @'parsedSubcommand'@, @'parsedError'@, and @'parsedHelp'@ to inspect the
+-- result of @'parseSubcommand'@.
+--
+-- Example:
+--
+-- @
+--runSubcommand :: Options cmdOpts => [Subcommand cmdOpts (IO ())] -> IO ()
+--runSubcommand subcommands = do
+--    args <- System.Environment.getArgs
+--    let parsed = 'parseSubcommand' subcommands args
+--    case 'parsedSubcommand' parsed of
+--        Just cmd -> cmd
+--        Nothing -> case 'parsedError' parsed of
+--            Just err -> do
+--                hPutStr stderr ('parsedHelp' parsed)
+--                hPutStrLn stderr err
+--                exitFailure
+--            Nothing -> do
+--                hPutStr stdout ('parsedHelp' parsed)
+--                exitSuccess
+-- @
+--
+parseSubcommand :: Options cmdOpts => [Subcommand cmdOpts action] -> [String] -> ParsedSubcommand action
+parseSubcommand subcommands args = parsed where
+	defs = addHelpFlags (addSubcommands subcommands optionsDefs)
+	help flag = helpFor flag defs
+	parsed = case tokenize defs args of
+		(subcmd, Left err) -> ParsedSubcommand Nothing (Just err) (help HelpSummary subcmd)
+		(Nothing, Right tokens) -> case checkHelpFlag tokens of
+			Just helpFlag -> ParsedSubcommand Nothing Nothing (help helpFlag Nothing)
+			Nothing -> ParsedSubcommand Nothing (Just "No subcommand specified") (help HelpSummary Nothing)
+		(Just subcmdName, Right tokens) -> case findSubcmd subcommands subcmdName tokens of
+			Left err -> ParsedSubcommand Nothing (Just err) (help HelpSummary (Just subcmdName))
+			Right io -> case checkHelpFlag tokens of
+				Just helpFlag -> ParsedSubcommand Nothing Nothing (help helpFlag (Just subcmdName))
+				Nothing -> ParsedSubcommand (Just io) Nothing (help HelpSummary (Just subcmdName))
 
 -- | Used to run applications that are split into subcommands.
 --
@@ -1004,31 +1075,17 @@ findSubcmd subcommands name tokens = subcmd where
 -- >Good bye 
 -- >$ ./app bye --name='John'
 -- >Good bye John
-runSubcommand :: (Options cmdOpts, MonadIO m) => [Subcommand cmdOpts m] -> m ()
+runSubcommand :: (Options cmdOpts, MonadIO m) => [Subcommand cmdOpts (m ())] -> m ()
 runSubcommand subcommands = do
 	args <- liftIO System.Environment.getArgs
-	let defs = addHelpFlags (addSubcommands subcommands optionsDefs)
-	case tokenize defs args of
-		(subcmd, Left err) -> liftIO $ do
-			hPutStr stderr (helpFor HelpSummary defs subcmd)
-			hPutStrLn stderr err
-			exitFailure
-		(Nothing, Right tokens) -> case checkHelpFlag tokens of
-			Just helpFlag -> liftIO $ do
-				hPutStr stdout (helpFor helpFlag defs Nothing)
-				exitSuccess
-			Nothing -> liftIO $ do
-				hPutStr stderr (helpFor HelpSummary defs Nothing)
-				hPutStrLn stderr "No subcommand specified"
+	let parsed = parseSubcommand subcommands args
+	case parsedSubcommand parsed of
+		Just cmd -> cmd
+		Nothing -> liftIO $ case parsedError parsed of
+			Just err -> do
+				hPutStr stderr (parsedHelp parsed)
+				hPutStrLn stderr err
 				exitFailure
-		(Just subcmdName, Right tokens) -> do
-			case findSubcmd subcommands subcmdName tokens of
-				Left err -> liftIO $ do
-					hPutStr stderr (helpFor HelpSummary defs (Just subcmdName))
-					hPutStrLn stderr err
-					exitFailure
-				Right io -> case checkHelpFlag tokens of
-					Just helpFlag -> liftIO $ do
-						hPutStr stdout (helpFor helpFlag defs (Just subcmdName))
-						exitSuccess
-					Nothing -> io
+			Nothing -> do
+				hPutStr stdout (parsedHelp parsed)
+				exitSuccess
