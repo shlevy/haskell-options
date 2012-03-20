@@ -144,7 +144,7 @@ module Options
 import           Control.Monad.Error (ErrorT, runErrorT, throwError)
 import           Control.Monad.IO.Class
 import           Control.Monad.Reader
-import           Control.Monad.Writer
+import           Control.Monad.State
 import           Data.Char (isAlpha, isAlphaNum, isLower)
 import           Data.Int
 import           Data.List (foldl', intercalate)
@@ -173,7 +173,14 @@ import           Options.Help
 class Options a where
 	optionsDefs :: OptionDefinitions a
 	optionsParse :: TokensFor a -> Either String a
-	optionsTypeName :: OptionsTypeName a
+	optionsMeta :: OptionsMeta a
+
+data OptionsMeta a = OptionsMeta
+	{ optionsMetaName :: Name
+	, optionsMetaKeys :: Set.Set String
+	, optionsMetaShortFlags :: Set.Set Char
+	, optionsMetaLongFlags :: Set.Set String
+	}
 
 -- | An option's type determines how the option will be parsed, and which
 -- Haskell type the parsed value will be stored as. There are many types
@@ -493,14 +500,23 @@ data Option a = Option
 	, optionGroup :: Group
 	}
 
-newtype OptionsM a = OptionsM { unOptionsM :: WriterT [(Name, Type, Q Exp, Q Exp)] (ErrorT String (Reader Loc)) a }
+newtype OptionsM a = OptionsM { unOptionsM :: StateT OptionsDeclState (ErrorT String (Reader Loc)) a }
+
+data OptionsDeclState = OptionsDeclState
+	{ stDecls :: [(Name, Type, Q Exp, Q Exp)]
+	, stSeenFieldNames :: Set.Set String
+	, stSeenKeys :: Set.Set String
+	, stSeenShortFlags :: Set.Set Char
+	, stSeenLongFlags :: Set.Set String
+	}
 
 instance Monad OptionsM where
 	return = OptionsM . return
 	m >>= f = OptionsM (unOptionsM m >>= (unOptionsM . f))
 
-runOptionsM :: Loc -> OptionsM () -> Either String [(Name, Type, Q Exp, Q Exp)]
-runOptionsM loc (OptionsM m) = runReader (runErrorT (execWriterT m)) loc
+runOptionsM :: Loc -> OptionsM () -> Either String OptionsDeclState
+runOptionsM loc (OptionsM m) = runReader (runErrorT (execStateT m initState)) loc where
+	initState = OptionsDeclState [] Set.empty Set.empty Set.empty Set.empty
 
 -- | Defines a new data type, containing fields for application or library
 -- options. The new type will be an instance of 'Options'.
@@ -526,16 +542,10 @@ defineOptions :: String -> OptionsM () -> Q [Dec]
 defineOptions rawName optionsM = do
 	loc <- location
 	let dataName = mkName rawName
-	fields <- case runOptionsM loc optionsM of
+	declState <- case runOptionsM loc optionsM of
 		Left err -> fail err
-		Right fields -> return fields
-	
-	-- Check 'fields' for duplicate field names.
-	when (hasDuplicates [n | (n, _, _, _) <- fields])
-		(fail ("Options type " ++ show rawName ++ " contains duplicate options."))
-	
-	-- TODO: check 'fields' for duplicate keys (should be impossible)
-	-- TODO: check 'fields' for duplicate flags
+		Right st -> return st
+	let fields = stDecls declState
 	
 	let dataDec = DataD [] dataName [] [RecC dataName
 		[(fName, NotStrict, t) | (fName, t, _, _) <- fields]
@@ -543,11 +553,11 @@ defineOptions rawName optionsM = do
 	
 	exp_optionsDefs <- getOptionsDefs fields
 	exp_optionsParse <- getOptionsParse dataName fields
-	exp_optionsTypeName <- getOptionsTypeName loc rawName
+	exp_optionsMeta <- getOptionsMeta loc rawName declState
 	let instanceDec = InstanceD [] (AppT (ConT ''Options) (ConT dataName))
 		[ ValD (VarP 'optionsDefs) (NormalB exp_optionsDefs) []
 		, ValD (VarP 'optionsParse) (NormalB exp_optionsParse) []
-		, ValD (VarP 'optionsTypeName) (NormalB exp_optionsTypeName) []
+		, ValD (VarP 'optionsMeta) (NormalB exp_optionsMeta) []
 		]
 	
 	return [dataDec, instanceDec]
@@ -573,11 +583,14 @@ getOptionsParse dataName fields = do
 	let parserM = return (DoE (binds ++ [NoBindS (AppE returnExp consExp)]))
 	[| unParserM $parserM |]
 
-getOptionsTypeName :: Loc -> String -> Q Exp
-getOptionsTypeName loc typeName = do
+getOptionsMeta :: Loc -> String -> OptionsDeclState -> Q Exp
+getOptionsMeta loc typeName st = do
 	let pkg = loc_package loc
 	let mod' = loc_module loc
-	[| OptionsTypeName (mkNameG_tc pkg mod' typeName) |]
+	let keys = Set.toList (stSeenKeys st)
+	let shorts = Set.toList (stSeenShortFlags st)
+	let longs = Set.toList (stSeenLongFlags st)
+	[| OptionsMeta (mkNameG_tc pkg mod' typeName) (Set.fromList keys) (Set.fromList shorts) (Set.fromList longs) |]
 
 newtype ParserM optType a = ParserM { unParserM :: TokensFor optType -> Either String a }
 
@@ -588,7 +601,9 @@ instance Monad (ParserM optType) where
 		Right x -> unParserM (f x) env)
 
 putOptionDecl :: Name -> Type -> Q Exp -> Q Exp -> OptionsM ()
-putOptionDecl name qtype infoExp parseExp = OptionsM (tell [(name, qtype, infoExp, parseExp)])
+putOptionDecl name qtype infoExp parseExp = OptionsM (modify (\st -> st
+	{ stDecls = stDecls st ++ [(name, qtype, infoExp, parseExp)]
+	}))
 
 -- | Defines a new option in the current options type.
 --
@@ -645,25 +660,16 @@ option fieldName f = do
 		Just n -> [| Just (GroupInfo n optGroupDesc optGroupHelpDesc) |]
 	
 	checkFieldName fieldName
+	checkValidFlags fieldName shorts longs
+	checkUniqueKey key
+	checkUniqueFlags fieldName shorts longs
 	
-	-- Check that at least one flag is defined (in either 'shorts' or 'longs').
-	when (length shorts == 0 && length longs == 0)
-		(OptionsM (throwError ("Option " ++ show fieldName ++ " does not define any flags")))
-	
-	-- Check that 'shorts' contains only non-repeated letters and digits
-	when (hasDuplicates shorts)
-		(OptionsM (throwError ("Option " ++ show fieldName ++ " has duplicate short flags")))
-	case filter (not . isAlphaNum) shorts of
-		[] -> return ()
-		invalid -> OptionsM (throwError ("Option " ++ show fieldName ++ " has invalid short flags " ++ show invalid))
-	
-	-- Check that 'longs' contains only non-repeated, non-empty strings
-	-- containing {LETTER,DIGIT,-,_} and starting with a letter.
-	when (hasDuplicates longs)
-		(OptionsM (throwError ("Option " ++ show fieldName ++ " has duplicate long flags")))
-	case filter (not . validLongFlag) longs of
-		[] -> return ()
-		invalid -> OptionsM (throwError ("Option " ++ show fieldName ++ " has invalid long flags " ++ show invalid))
+	OptionsM (modify (\st -> st
+		{ stSeenFieldNames = Set.insert fieldName (stSeenFieldNames st)
+		, stSeenKeys = Set.insert key (stSeenKeys st)
+		, stSeenShortFlags = Set.union (Set.fromList shorts) (stSeenShortFlags st)
+		, stSeenLongFlags = Set.union (Set.fromList longs) (stSeenLongFlags st)
+		}))
 	
 	let OptionType thType unary parseExp = optionType opt
 	putOptionDecl
@@ -691,8 +697,54 @@ validFieldName = valid where
 	validGeneral c = isAlphaNum c || c == '_' || c == '\''
 
 checkFieldName :: String -> OptionsM ()
-checkFieldName name = unless (validFieldName name)
-	(OptionsM (throwError ("Option field name " ++ show name ++ " is invalid.")))
+checkFieldName name = do
+	unless (validFieldName name)
+		(OptionsM (throwError ("Option field name " ++ show name ++ " is invalid.")))
+	st <- OptionsM get
+	when (Set.member name (stSeenFieldNames st))
+		(OptionsM (throwError ("Duplicate definitions of field " ++ show name ++ ".")))
+
+checkUniqueKey :: String -> OptionsM ()
+checkUniqueKey key = do
+	st <- OptionsM get
+	when (Set.member key (stSeenKeys st))
+		(OptionsM (throwError ("Option key " ++ show key ++ " has already been defined. This should never happen; please send an error report to the maintainer of the 'options' package.")))
+
+checkValidFlags :: String -> [Char] -> [String] -> OptionsM ()
+checkValidFlags fieldName shorts longs = do
+	-- Check that at least one flag is defined (in either 'shorts' or 'longs').
+	when (length shorts == 0 && length longs == 0)
+		(OptionsM (throwError ("Option " ++ show fieldName ++ " does not define any flags")))
+	
+	-- Check that 'shorts' contains only non-repeated letters and digits
+	when (hasDuplicates shorts)
+		(OptionsM (throwError ("Option " ++ show fieldName ++ " has duplicate short flags")))
+	case filter (not . isAlphaNum) shorts of
+		[] -> return ()
+		invalid -> OptionsM (throwError ("Option " ++ show fieldName ++ " has invalid short flags " ++ show invalid))
+	
+	-- Check that 'longs' contains only non-repeated, non-empty strings
+	-- containing {LETTER,DIGIT,-,_} and starting with a letter.
+	when (hasDuplicates longs)
+		(OptionsM (throwError ("Option " ++ show fieldName ++ " has duplicate long flags.")))
+	case filter (not . validLongFlag) longs of
+		[] -> return ()
+		invalid -> OptionsM (throwError ("Option " ++ show fieldName ++ " has invalid long flags " ++ show invalid))
+
+checkUniqueFlags :: String -> [Char] -> [String] -> OptionsM ()
+checkUniqueFlags fieldName shorts longs = do
+	st <- OptionsM get
+	
+	-- Check that none of this option's flags are already used.
+	let dupShort = do
+		f <- Set.toList (Set.intersection (stSeenShortFlags st) (Set.fromList shorts))
+		return ('-' : [f])
+	let dupLong = do
+		f <- Set.toList (Set.intersection (stSeenLongFlags st) (Set.fromList longs))
+		return ("--" ++ f)
+	let dups = dupShort ++ dupLong
+	unless (null dups)
+		(OptionsM (throwError ("Option " ++ show fieldName ++ " uses already-defined flags " ++ show dups)))
 
 validLongFlag :: String -> Bool
 validLongFlag = valid where
@@ -744,22 +796,44 @@ hasDuplicates xs = Set.size (Set.fromList xs) /= length xs
 -- to aggregate their options into a single top-level type, so application
 -- authors can include it easily in their own option definitions.
 options :: String -> ImportedOptions a -> OptionsM ()
-options fieldName (ImportedOptions typeName) = do
+options fieldName (ImportedOptions meta) = do
 	checkFieldName fieldName
+	
+	let typeName = optionsMetaName meta
+	st <- OptionsM get
+	
+	-- Check unique keys
+	let dupKeys = Set.intersection (stSeenKeys st) (optionsMetaKeys meta)
+	unless (Set.null dupKeys)
+		(OptionsM (throwError ("Imported options type " ++ show typeName ++ " contains duplicate keys " ++ show (Set.toList dupKeys) ++ ". This should never happen; please send an error report to the maintainer of the 'options' package.")))
+	
+	-- Check unique flags
+	let dupShort = do
+		f <- Set.toList (Set.intersection (stSeenShortFlags st) (optionsMetaShortFlags meta))
+		return ('-' : [f])
+	let dupLong = do
+		f <- Set.toList (Set.intersection (stSeenLongFlags st) (optionsMetaLongFlags meta))
+		return ("--" ++ f)
+	let dups = dupShort ++ dupLong
+	unless (null dups)
+		(OptionsM (throwError ("Imported options type " ++ show typeName ++ " contains conflicting definitions for flags " ++ show dups)))
+	
+	OptionsM (modify (\st' -> st'
+		{ stSeenFieldNames = Set.insert fieldName (stSeenFieldNames st)
+		, stSeenShortFlags = Set.union (optionsMetaShortFlags meta) (stSeenShortFlags st)
+		, stSeenLongFlags = Set.union (optionsMetaLongFlags meta) (stSeenLongFlags st)
+		}))
+	
 	putOptionDecl
 		(mkName fieldName)
 		(ConT typeName)
 		[| suboptsDefs $(varE (mkName fieldName)) |]
 		[| parseSubOptions |]
 
-data OptionsTypeName a = OptionsTypeName Name
-
-data ImportedOptions a = ImportedOptions Name
+newtype ImportedOptions a = ImportedOptions (OptionsMeta a)
 
 importedOptions :: Options a => ImportedOptions a
-importedOptions = impl optionsTypeName where
-	impl :: OptionsTypeName a -> ImportedOptions a
-	impl (OptionsTypeName n) = ImportedOptions n
+importedOptions = ImportedOptions optionsMeta
 
 castTokens :: TokensFor a -> TokensFor b
 castTokens (TokensFor tokens args) = TokensFor tokens args
