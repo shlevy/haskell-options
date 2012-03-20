@@ -52,6 +52,7 @@ module Options
 	(
 	-- * The Options type
 	  Options
+	, defaultOptions
 	
 	-- * Parsing options
 	, getOptionsOrDie
@@ -181,6 +182,15 @@ data OptionsMeta a = OptionsMeta
 	, optionsMetaShortFlags :: Set.Set Char
 	, optionsMetaLongFlags :: Set.Set String
 	}
+
+defaultOptions :: Options a => a
+defaultOptions = opts where
+	parsed = parseOptions []
+	opts = case parsedOptions parsed of
+		Just v -> v
+		Nothing -> error ("defaultOptions: Internal error, option defaults are invalid: " ++ (case parsedError parsed of
+			Just err -> err
+			Nothing -> "(no error provided)"))
 
 -- | An option's type determines how the option will be parsed, and which
 -- Haskell type the parsed value will be stored as. There are many types
