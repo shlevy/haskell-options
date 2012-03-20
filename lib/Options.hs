@@ -139,9 +139,11 @@ module Options
 	, parseSubcommand
 	) where
 
+import           Control.Monad.Error (ErrorT, runErrorT, throwError)
 import           Control.Monad.IO.Class
 import           Control.Monad.Reader
 import           Control.Monad.Writer
+import           Data.Char (isAlpha, isAlphaNum, isLower)
 import           Data.Int
 import           Data.List (foldl', intercalate)
 import qualified Data.Map as Map
@@ -487,14 +489,14 @@ data Option a = Option
 	, optionGroup :: Group
 	}
 
-newtype OptionsM a = OptionsM { unOptionsM :: ReaderT Loc (Writer [(Name, Type, Q Exp, Q Exp)]) a }
+newtype OptionsM a = OptionsM { unOptionsM :: WriterT [(Name, Type, Q Exp, Q Exp)] (ErrorT String (Reader Loc)) a }
 
 instance Monad OptionsM where
 	return = OptionsM . return
 	m >>= f = OptionsM (unOptionsM m >>= (unOptionsM . f))
 
-runOptionsM :: Loc -> OptionsM () -> [(Name, Type, Q Exp, Q Exp)]
-runOptionsM loc (OptionsM m) = execWriter (runReaderT m loc)
+runOptionsM :: Loc -> OptionsM () -> Either String [(Name, Type, Q Exp, Q Exp)]
+runOptionsM loc (OptionsM m) = runReader (runErrorT (execWriterT m)) loc
 
 -- | Defines a new data type, containing fields for application or library
 -- options. The new type will be an instance of 'Options'.
@@ -520,9 +522,14 @@ defineOptions :: String -> OptionsM () -> Q [Dec]
 defineOptions rawName optionsM = do
 	loc <- location
 	let dataName = mkName rawName
-	let fields = runOptionsM loc optionsM
+	fields <- case runOptionsM loc optionsM of
+		Left err -> fail err
+		Right fields -> return fields
 	
-	-- TODO: check 'fields' for duplicate field names
+	-- Check 'fields' for duplicate field names.
+	when (hasDuplicates [n | (n, _, _, _) <- fields])
+		(fail ("Options type " ++ show rawName ++ " contains duplicate options."))
+	
 	-- TODO: check 'fields' for duplicate keys (should be impossible)
 	-- TODO: check 'fields' for duplicate flags
 	
@@ -625,14 +632,26 @@ option fieldName f = do
 		Nothing -> [| Nothing |]
 		Just n -> [| Just (GroupInfo n optGroupDesc optGroupHelpDesc) |]
 	
-	-- TODO: check that 'fieldName' is a valid Haskell field name
-	-- TODO: check that 'shorts' contains only non-repeated ASCII letters
-	--       and digits
-	-- TODO: check that 'longs' contains only non-repeated, non-empty
-	--       strings containing [A-Z] [a-z] [0-9] - _ and starting with a
-	--       letter or digit.
-	-- TODO: check that at least one flag is defined (in either 'shorts'
-	--       or 'longs').
+	checkFieldName fieldName
+	
+	-- Check that at least one flag is defined (in either 'shorts' or 'longs').
+	when (length shorts == 0 && length longs == 0)
+		(OptionsM (throwError ("Option " ++ show fieldName ++ " does not define any flags")))
+	
+	-- Check that 'shorts' contains only non-repeated letters and digits
+	when (hasDuplicates shorts)
+		(OptionsM (throwError ("Option " ++ show fieldName ++ " has duplicate short flags")))
+	case filter (not . isAlphaNum) shorts of
+		[] -> return ()
+		invalid -> OptionsM (throwError ("Option " ++ show fieldName ++ " has invalid short flags " ++ show invalid))
+	
+	-- Check that 'longs' contains only non-repeated, non-empty strings
+	-- containing {LETTER,DIGIT,-,_} and starting with a letter.
+	when (hasDuplicates longs)
+		(OptionsM (throwError ("Option " ++ show fieldName ++ " has duplicate long flags")))
+	case filter (not . validLongFlag) longs of
+		[] -> return ()
+		invalid -> OptionsM (throwError ("Option " ++ show fieldName ++ " has invalid long flags " ++ show invalid))
 	
 	let OptionType thType unary parseExp = optionType opt
 	putOptionDecl
@@ -650,6 +669,28 @@ parseOptionTok key p def = do
 	case p val of
 		Left err -> ParserM (\_ -> Left err)
 		Right x -> return x
+
+validFieldName :: String -> Bool
+validFieldName = valid where
+	valid s = case s of
+		[] -> False
+		c : cs -> validFirst c && all validGeneral cs
+	validFirst c = isLower c || c == '_'
+	validGeneral c = isAlphaNum c || c == '_' || c == '\''
+
+checkFieldName :: String -> OptionsM ()
+checkFieldName name = unless (validFieldName name)
+	(OptionsM (throwError ("Option field name " ++ show name ++ " is invalid.")))
+
+validLongFlag :: String -> Bool
+validLongFlag = valid where
+	valid s = case s of
+		[] -> False
+		c : cs -> isAlpha c && all validGeneral cs
+	validGeneral c = isAlphaNum c || c == '-' || c == '_'
+
+hasDuplicates :: Ord a => [a] -> Bool
+hasDuplicates xs = Set.size (Set.fromList xs) /= length xs
 
 -- | Include options defined elsewhere into the current options definition.
 --
@@ -692,7 +733,7 @@ parseOptionTok key p def = do
 -- authors can include it easily in their own option definitions.
 options :: String -> Name -> OptionsM ()
 options fieldName optionTypeName = do
-	-- TODO: check that 'fieldName' is a valid Haskell field name
+	checkFieldName fieldName
 	putOptionDecl
 		(mkName fieldName)
 		(ConT optionTypeName)
