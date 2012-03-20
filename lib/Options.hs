@@ -71,6 +71,8 @@ module Options
 	, doubleOption
 	
 	-- ** Using imported options
+	, ImportedOptions
+	, importedOptions
 	, options
 	
 	-- ** Advanted option definitions
@@ -155,6 +157,7 @@ import           System.Exit (exitFailure, exitSuccess)
 import           System.IO
 
 import           Language.Haskell.TH
+import           Language.Haskell.TH.Syntax (mkNameG_tc)
 
 import           Options.Types
 import           Options.Tokenize
@@ -170,6 +173,7 @@ import           Options.Help
 class Options a where
 	optionsDefs :: OptionDefinitions a
 	optionsParse :: TokensFor a -> Either String a
+	optionsTypeName :: OptionsTypeName a
 
 -- | An option's type determines how the option will be parsed, and which
 -- Haskell type the parsed value will be stored as. There are many types
@@ -539,9 +543,11 @@ defineOptions rawName optionsM = do
 	
 	exp_optionsDefs <- getOptionsDefs fields
 	exp_optionsParse <- getOptionsParse dataName fields
+	exp_optionsTypeName <- getOptionsTypeName loc rawName
 	let instanceDec = InstanceD [] (AppT (ConT ''Options) (ConT dataName))
 		[ ValD (VarP 'optionsDefs) (NormalB exp_optionsDefs) []
 		, ValD (VarP 'optionsParse) (NormalB exp_optionsParse) []
+		, ValD (VarP 'optionsTypeName) (NormalB exp_optionsTypeName) []
 		]
 	
 	return [dataDec, instanceDec]
@@ -566,6 +572,12 @@ getOptionsParse dataName fields = do
 	let consExp = foldl' AppE (ConE dataName) (map VarE names)
 	let parserM = return (DoE (binds ++ [NoBindS (AppE returnExp consExp)]))
 	[| unParserM $parserM |]
+
+getOptionsTypeName :: Loc -> String -> Q Exp
+getOptionsTypeName loc typeName = do
+	let pkg = loc_package loc
+	let mod' = loc_module loc
+	[| OptionsTypeName (mkNameG_tc pkg mod' typeName) |]
 
 newtype ParserM optType a = ParserM { unParserM :: TokensFor optType -> Either String a }
 
@@ -731,14 +743,23 @@ hasDuplicates xs = Set.size (Set.fromList xs) /= length xs
 -- Use of 'options' may be arbitrarily nested. Library authors are encouraged
 -- to aggregate their options into a single top-level type, so application
 -- authors can include it easily in their own option definitions.
-options :: String -> Name -> OptionsM ()
-options fieldName optionTypeName = do
+options :: String -> ImportedOptions a -> OptionsM ()
+options fieldName (ImportedOptions typeName) = do
 	checkFieldName fieldName
 	putOptionDecl
 		(mkName fieldName)
-		(ConT optionTypeName)
+		(ConT typeName)
 		[| suboptsDefs $(varE (mkName fieldName)) |]
 		[| parseSubOptions |]
+
+data OptionsTypeName a = OptionsTypeName Name
+
+data ImportedOptions a = ImportedOptions Name
+
+importedOptions :: Options a => ImportedOptions a
+importedOptions = impl optionsTypeName where
+	impl :: OptionsTypeName a -> ImportedOptions a
+	impl (OptionsTypeName n) = ImportedOptions n
 
 castTokens :: TokensFor a -> TokensFor b
 castTokens (TokensFor tokens args) = TokensFor tokens args
