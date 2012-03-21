@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 
@@ -8,6 +9,7 @@ module OptionsTests.OptionTypes
 	( test_OptionTypes
 	) where
 
+import           Control.Monad (unless)
 import           Data.Int
 import qualified Data.Map as Map
 import qualified Data.Set as Set
@@ -23,6 +25,7 @@ test_OptionTypes = suite "option-types"
 	[ test_Bool
 	, test_String
 	, test_Text
+	, test_RawString
 	, test_Int
 	, test_Int8
 	, test_Int16
@@ -57,15 +60,64 @@ test_Bool = assertions "bool" $ do
 	$expect (parseValid optionTypeBool "false" False)
 	$expect (parseInvalid optionTypeBool "" "invalid boolean value: \"\"")
 
+nativeAscii, nativeUnicode, nativeBytes, nativeBytesU :: String
+#if defined(CABAL_OS_WINDOWS)
+nativeAscii = "hello"
+nativeUnicode = "\12371\12435\12395\12385\12399"
+nativeBytes = ""
+nativeBytesU = ""
+#else
+#if __GLASGOW_HASKELL__ >= 704
+nativeAscii = "hello"
+nativeUnicode = "\12371\12435\12395\12385\12399"
+nativeBytes = "a-\56507-c.txt"
+nativeBytesU = "a-\65533-c.txt"
+#elif __GLASGOW_HASKELL__ >= 702
+nativeAscii = "hello"
+nativeUnicode = "\12371\12435\12395\12385\12399"
+nativeBytes = "a-\61371-c.txt"
+nativeBytesU = "a-\61371-c.txt"
+#else
+nativeAscii = "hello"
+nativeUnicode = "\227\129\147\227\130\147\227\129\171\227\129\161\227\129\175"
+nativeBytes = "a-\187-c.txt"
+nativeBytesU = "a-\65533-c.txt"
+#endif
+#endif
+
 test_String :: Suite
 test_String = assertions "string" $ do
-	$expect (parseValid optionTypeString "" "")
-	-- TODO: unicode
+	let valid = parseValid optionTypeString
+	let invalid = parseInvalid optionTypeString
+	
+	$expect (valid "" "")
+	$expect (valid nativeAscii "hello")
+	$expect (valid nativeUnicode "\12371\12435\12395\12385\12399")
+	unless (null nativeBytes) $ do
+		$expect (valid nativeBytes "a-\56507-c.txt")
 
 test_Text :: Suite
 test_Text = assertions "text" $ do
-	$expect (parseValid optionTypeText "" (Text.pack ""))
-	-- TODO: unicode
+	let p = Text.pack
+	let valid = parseValid optionTypeText
+	let invalid = parseInvalid optionTypeText
+	
+	$expect (valid "" (p ""))
+	$expect (valid nativeAscii (p "hello"))
+	$expect (valid nativeUnicode (p "\12371\12435\12395\12385\12399"))
+	unless (null nativeBytes) $ do
+		$expect (valid nativeBytes (p nativeBytesU))
+
+test_RawString :: Suite
+test_RawString = assertions "raw-string" $ do
+	let valid = parseValid optionTypeRawString
+	let invalid = parseInvalid optionTypeRawString
+	
+	$expect (valid "" "")
+	$expect (valid nativeAscii nativeAscii)
+	$expect (valid nativeUnicode nativeUnicode)
+	unless (null nativeBytes) $ do
+		$expect (valid nativeBytes nativeBytes)
 
 test_Int :: Suite
 test_Int = assertions "int" $ do

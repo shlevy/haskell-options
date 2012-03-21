@@ -15,6 +15,9 @@ executable options_tests
   if flag(coverage)
     ghc-options: -fhpc
 
+  if os(windows)
+      cpp-options: -DCABAL_OS_WINDOWS
+
   build-depends:
       base >= 4.0 && < 5.0
     , bytestring
@@ -27,3 +30,4 @@ executable options_tests
     , template-haskell
     , text
     , transformers
+

@@ -93,6 +93,7 @@ module Options
 	
 	, optionTypeString
 	, optionTypeText
+	, optionTypeRawString
 	
 	, optionTypeInt
 	, optionTypeInt8
