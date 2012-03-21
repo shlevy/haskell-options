@@ -276,24 +276,6 @@ optionTypeFloat = OptionType (ConT ''Float) False (parseFloat "float") [| parseF
 optionTypeDouble :: OptionType Double
 optionTypeDouble = OptionType (ConT ''Double) False (parseFloat "double") [| parseFloat "double" |]
 
--- | Store an option as a list, using another option type for the elements.
--- The separator should be a character that will not occur within the values,
--- such as a comma or semicolon.
---
--- @
---'option' \"optNames\" (\\o -> o
---    { 'optionLongFlags' = [\"names\"]
---    , 'optionDefault' = \"Alice;Bob;Charles\"
---    , 'optionType' = 'optionTypeList' \';\' 'optionTypeString'
---    })
--- @
-optionTypeList :: Char -- ^ Element separator
-               -> OptionType a -- ^ Element type
-               -> OptionType [a]
-optionTypeList sep (OptionType valType _ valParse valParseExp) = OptionType (AppT ListT valType) False
-	(\s -> parseList valParse (split sep s))
-	[| \s -> parseList $valParseExp (split sep s) |]
-
 -- | Store an option as a @'Set.Set'@, using another option type for the
 -- elements. The separator should be a character that will not occur within
 -- the values, such as a comma or semicolon.
@@ -380,6 +362,26 @@ split sep s0 = loop s0 where
 		(chunk, rest) = break (== sep) s
 		cont = chunk : loop (tail rest)
 		in if null rest then [chunk] else cont
+
+$([d| |])
+
+-- | Store an option as a list, using another option type for the elements.
+-- The separator should be a character that will not occur within the values,
+-- such as a comma or semicolon.
+--
+-- @
+--'option' \"optNames\" (\\o -> o
+--    { 'optionLongFlags' = [\"names\"]
+--    , 'optionDefault' = \"Alice;Bob;Charles\"
+--    , 'optionType' = 'optionTypeList' \';\' 'optionTypeString'
+--    })
+-- @
+optionTypeList :: Char -- ^ Element separator
+               -> OptionType a -- ^ Element type
+               -> OptionType [a]
+optionTypeList sep (OptionType valType _ valParse valParseExp) = OptionType (AppT ListT valType) False
+	(\s -> parseList valParse (split sep s))
+	[| \s -> parseList $valParseExp (split sep s) |]
 
 -- | Store an option as one of a set of enumerated values. The option
 -- type must be defined in a separate file.
