@@ -15,6 +15,15 @@ synopsis: Parsing command-line options
 description:
 
 extra-source-files:
+  scripts/common.bash
+  scripts/run-coverage
+  scripts/run-tests
+  --
+  tests/options-tests.cabal
+  tests/OptionsTests.hs
+  tests/OptionsTests/Help.hs
+  tests/OptionsTests/OptionTypes.hs
+  tests/OptionsTests/Tokenize.hs
 
 source-repository head
   type: bazaar
