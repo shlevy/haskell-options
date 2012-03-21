@@ -62,28 +62,32 @@ test_Bool = assertions "bool" $ do
 	$expect (parseValid optionTypeBool "false" False)
 	$expect (parseInvalid optionTypeBool "" "invalid boolean value: \"\"")
 
-nativeAscii, nativeUnicode, nativeBytes, nativeBytesU :: String
+nativeAscii, nativeUnicode, nativeBytes, nativeBytesU, nativeBytesT :: String
 #if defined(CABAL_OS_WINDOWS)
 nativeAscii = "hello"
 nativeUnicode = "\12371\12435\12395\12385\12399"
 nativeBytes = ""
 nativeBytesU = ""
+nativeBytesT = ""
 #else
 #if __GLASGOW_HASKELL__ >= 704
 nativeAscii = "hello"
 nativeUnicode = "\12371\12435\12395\12385\12399"
 nativeBytes = "a-\56507-c.txt"
-nativeBytesU = "a-\65533-c.txt"
+nativeBytesU = "a-\56507-c.txt"
+nativeBytesT = "a-\65533-c.txt"
 #elif __GLASGOW_HASKELL__ >= 702
 nativeAscii = "hello"
 nativeUnicode = "\12371\12435\12395\12385\12399"
 nativeBytes = "a-\61371-c.txt"
 nativeBytesU = "a-\61371-c.txt"
+nativeBytesT = "a-\61371-c.txt"
 #else
 nativeAscii = "hello"
 nativeUnicode = "\227\129\147\227\130\147\227\129\171\227\129\161\227\129\175"
 nativeBytes = "a-\187-c.txt"
-nativeBytesU = "a-\65533-c.txt"
+nativeBytesU = "a-\56507-c.txt"
+nativeBytesT = "a-\65533-c.txt"
 #endif
 #endif
 
@@ -96,7 +100,7 @@ test_String = assertions "string" $ do
 	$expect (valid nativeAscii "hello")
 	$expect (valid nativeUnicode "\12371\12435\12395\12385\12399")
 	unless (null nativeBytes) $ do
-		$expect (valid nativeBytes "a-\56507-c.txt")
+		$expect (valid nativeBytes nativeBytesU)
 
 test_Text :: Suite
 test_Text = assertions "text" $ do
@@ -108,7 +112,7 @@ test_Text = assertions "text" $ do
 	$expect (valid nativeAscii (p "hello"))
 	$expect (valid nativeUnicode (p "\12371\12435\12395\12385\12399"))
 	unless (null nativeBytes) $ do
-		$expect (valid nativeBytes (p nativeBytesU))
+		$expect (valid nativeBytes (p nativeBytesT))
 
 test_RawString :: Suite
 test_RawString = assertions "raw-string" $ do
