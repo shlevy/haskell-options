@@ -43,5 +43,6 @@ library
 
   other-modules:
     Options.Help
-    Options.Types
+    Options.OptionTypes
     Options.Tokenize
+    Options.Types

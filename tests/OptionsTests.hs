@@ -8,13 +8,15 @@ module Main
 
 import           Test.Chell (Suite, defaultMain)
 
-import           OptionsTests.Tokenize (test_Tokenize)
 import           OptionsTests.Help (test_Help)
+import           OptionsTests.OptionTypes (test_OptionTypes)
+import           OptionsTests.Tokenize (test_Tokenize)
 
 tests :: [Suite]
 tests =
-	[ test_Tokenize
+	[ test_OptionTypes
 	, test_Help
+	, test_Tokenize
 	]
 
 main :: IO ()
