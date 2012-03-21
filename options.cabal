@@ -13,6 +13,49 @@ bug-reports: mailto:jmillikin@gmail.com
 
 synopsis: Parsing command-line options
 description:
+  The @Options@ package lets library and application developers easily work
+  with command-line options.
+  .
+  The following example is a full program that can accept two options,
+  @--message@ and @--quiet@:
+  .
+  @
+  &#x7b;-\# LANGUAGE TemplateHaskell \#-&#x7d;
+  .
+  import Options
+  .
+  defineOptions \"MainOptions\" $ do
+  &#x20;   stringOption \"optMessage\" \"message\" \"Hello world!\"
+  &#x20;       \"A message to show the user.\"
+  &#x20;   boolOption \"optQuiet\" \"quiet\" False
+  &#x20;       \"Whether to be quiet.\"
+  &#x20;
+  main :: IO ()
+  main = do
+  &#x20;   opts <- getOptionsOrDie
+  &#x20;   if optQuiet opts
+  &#x20;       then return ()
+  &#x20;       else putStrLn (optMessage opts)
+  @
+  .
+  >$ ./hello
+  >Hello world!
+  >$ ./hello --message='ciao mondo'
+  >ciao mondo
+  >$ ./hello --quiet
+  >$
+  .
+  In addition, this library will automatically create documentation options
+  such as @--help@ and @--help-all@:
+  .
+  >$ ./hello --help
+  >Help Options:
+  >  -h, --help                  Show option summary.
+  >  --help-all                  Show all help options.
+  >
+  >Application Options:
+  >  --message                   A message to show the user.
+  >  --quiet                     Whether to be quiet.
 
 extra-source-files:
   scripts/common.bash
