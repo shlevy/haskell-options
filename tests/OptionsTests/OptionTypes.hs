@@ -16,6 +16,7 @@ import qualified Data.Set as Set
 import qualified Data.Text as Text
 import           Data.Word
 
+import qualified Filesystem.Path.CurrentOS as Path
 import           Test.Chell
 
 import           Options.OptionTypes
@@ -26,6 +27,7 @@ test_OptionTypes = suite "option-types"
 	, test_String
 	, test_Text
 	, test_RawString
+	, test_FilePath
 	, test_Int
 	, test_Int8
 	, test_Int16
@@ -118,6 +120,18 @@ test_RawString = assertions "raw-string" $ do
 	$expect (valid nativeUnicode nativeUnicode)
 	unless (null nativeBytes) $ do
 		$expect (valid nativeBytes nativeBytes)
+
+test_FilePath :: Suite
+test_FilePath = assertions "filepath" $ do
+	let p = Path.decodeString
+	let valid = parseValid optionTypeFilePath
+	let invalid = parseInvalid optionTypeFilePath
+	
+	$expect (valid "" (p ""))
+	$expect (valid nativeAscii (p nativeAscii))
+	$expect (valid nativeUnicode (p nativeUnicode))
+	unless (null nativeBytes) $ do
+		$expect (valid nativeBytes (p nativeBytes))
 
 test_Int :: Suite
 test_Int = assertions "int" $ do

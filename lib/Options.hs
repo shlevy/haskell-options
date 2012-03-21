@@ -66,6 +66,7 @@ module Options
 	, stringsOption
 	, textOption
 	, textsOption
+	, pathOption
 	, intOption
 	, integerOption
 	, floatOption
@@ -94,6 +95,7 @@ module Options
 	, optionTypeString
 	, optionTypeText
 	, optionTypeRawString
+	, optionTypeFilePath
 	
 	, optionTypeInt
 	, optionTypeInt8
@@ -154,6 +156,7 @@ import qualified System.Environment
 import           System.Exit (exitFailure, exitSuccess)
 import           System.IO
 
+import qualified Filesystem.Path.CurrentOS as Path
 import           Language.Haskell.TH
 import           Language.Haskell.TH.Syntax (mkNameG_tc)
 
@@ -598,6 +601,7 @@ textOption :: String -- ^ Field name
 textOption name flag def desc = option name (\o -> o
 	{ optionLongFlags = [flag]
 	, optionDefault = Text.unpack def
+	, optionType = optionTypeText
 	, optionDescription = desc
 	})
 
@@ -612,6 +616,20 @@ textsOption name flag def desc = option name (\o -> o
 	{ optionLongFlags = [flag]
 	, optionDefault = Text.unpack (Text.intercalate (Text.pack ",") def)
 	, optionType = optionTypeList ',' optionTypeText
+	, optionDescription = desc
+	})
+
+-- | Define an option of type @'Path.FilePath'@. This is a simple wrapper
+-- around 'option'.
+pathOption :: String -- ^ Field name
+           -> String -- ^ Long flag
+           -> Path.FilePath -- ^ Default value
+           -> String -- ^ Description in @--help@
+           -> OptionsM ()
+pathOption name flag def desc = option name (\o -> o
+	{ optionLongFlags = [flag]
+	, optionDefault = Path.encodeString def
+	, optionType = optionTypeFilePath
 	, optionDescription = desc
 	})
 

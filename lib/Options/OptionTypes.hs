@@ -18,6 +18,7 @@ import           Data.Text.Encoding.Error (UnicodeException)
 import           Data.Word
 import           System.IO.Unsafe (unsafePerformIO)
 
+import qualified Filesystem.Path.CurrentOS as Path
 import           Language.Haskell.TH
 
 data Option a = Option
@@ -169,6 +170,13 @@ parseText s = Right (Text.pack (decodeString s))
 -- received, with no decoding or other transformations applied.
 optionTypeRawString :: OptionType String
 optionTypeRawString = OptionType (ConT ''String) False Right [| Right |]
+
+-- | Store an option value as a @'Path.FilePath'@.
+optionTypeFilePath :: OptionType Path.FilePath
+optionTypeFilePath = OptionType (ConT ''Path.FilePath) False parsePath [| parsePath |]
+
+parsePath :: String -> Either String Path.FilePath
+parsePath s = Right (Path.decodeString s)
 
 parseInteger :: String -> String -> Either String Integer
 parseInteger label s = parsed where

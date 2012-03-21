@@ -27,6 +27,7 @@ executable options_tests
     , monads-tf
     , QuickCheck
     , split
+    , system-filepath >= 0.4 && < 0.5
     , template-haskell
     , text
     , transformers
