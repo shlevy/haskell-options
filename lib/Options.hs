@@ -807,7 +807,7 @@ parseOptions args = parsed where
 -- developer is using the default help flag definitions, then this computation
 -- will print documentation and call 'exitSuccess'.
 --
--- See 'runSubcommands' for details on subcommand support.
+-- See 'runSubcommand' for details on subcommand support.
 getOptionsOrDie :: (MonadIO m, Options a) => m a
 getOptionsOrDie = do
 	args <- liftIO System.Environment.getArgs
