@@ -482,7 +482,7 @@ hasDuplicates xs = Set.size (Set.fromList xs) /= length xs
 --
 --'defineOptions' \"MainOptions\" $ do
 --   'boolOption' \"optVerbose\" \"verbose\" False \"Be really loud.\"
---   'options' \"optFoo\" \'\'FooOptions
+--   'options' \"optFoo\" ('importedOptions' :: 'ImportedOptions' FooOptions)
 --
 --main :: IO ()
 --main = do
