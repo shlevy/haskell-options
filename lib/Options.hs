@@ -22,8 +22,7 @@
 --        \"Whether to be quiet.\"
 --
 --main :: IO ()
---main = do
---    (opts, args) <- 'getOptionsOrDie'
+--main = 'runCommand' $ \\opts args -> do
 --    if optQuiet opts
 --        then return ()
 --        else putStrLn (optMessage opts)
@@ -50,12 +49,17 @@
 --
 module Options
 	(
-	-- * The Options type
+	-- * 
 	  Options
 	, defaultOptions
 	
-	-- * Parsing options
-	, getOptionsOrDie
+	-- * Commands
+	, runCommand
+	
+	-- ** Subcommands
+	, Subcommand
+	, subcommand
+	, runSubcommand
 	
 	-- * Defining options
 	, defineOptions
@@ -123,23 +127,18 @@ module Options
 	, groupTitle
 	, groupDescription
 	
-	-- * Subcommands
-	, Subcommand
-	, subcommand
-	, runSubcommand
-	
-	-- * Argument Parsing
+	-- * Parsing argument lists
 	, Parsed
 	, parsedError
 	, parsedHelp
 	
-	-- ** Options
+	-- ** Parsing options
 	, ParsedOptions
 	, parsedOptions
 	, parsedArguments
 	, parseOptions
 	
-	-- ** Subcommands
+	-- ** Parsing subcommands
 	, ParsedSubcommand
 	, parsedSubcommand
 	, parseSubcommand
@@ -494,8 +493,7 @@ hasDuplicates xs = Set.size (Set.fromList xs) /= length xs
 --   'options' \"optFoo\" ('importedOptions' :: 'ImportedOptions' FooOptions)
 --
 --main :: IO ()
---main = do
---    (opts, args) <- 'getOptionsOrDie'
+--main = runCommand $ \\opts args -> do
 --    foo (optFoo opts)
 -- @
 --
@@ -785,12 +783,12 @@ parsedHelp = parsedHelp_
 -- Example:
 --
 -- @
---getOptionsOrDie :: Options a => IO (a, [String])
+--getOptionsOrDie :: Options a => IO a
 --getOptionsOrDie = do
 --    argv <- System.Environment.getArgs
 --    let parsed = 'parseOptions' argv
 --    case 'parsedOptions' parsed of
---        Just opts -> return (opts, 'parsedArguments' parsed)
+--        Just opts -> return opts
 --        Nothing -> case 'parsedError' parsed of
 --            Just err -> do
 --                hPutStrLn stderr ('parsedHelp' parsed)
@@ -813,7 +811,8 @@ parseOptions argv = parsed where
 				Right (opts, args) -> ParsedOptions (Just opts) Nothing (help HelpSummary) args
 
 -- | Retrieve 'System.Environment.getArgs', and attempt to parse it into a
--- valid value of an 'Options' type plus a list of left-over arguments.
+-- valid value of an 'Options' type plus a list of left-over arguments. The
+-- options and arguments are then passed to the provided computation.
 --
 -- If parsing fails, this computation will print an error and call
 -- 'exitFailure'.
@@ -823,12 +822,12 @@ parseOptions argv = parsed where
 -- will print documentation and call 'exitSuccess'.
 --
 -- See 'runSubcommand' for details on subcommand support.
-getOptionsOrDie :: (MonadIO m, Options a) => m (a, [String])
-getOptionsOrDie = do
+runCommand :: (MonadIO m, Options opts) => (opts -> [String] -> m a) -> m a
+runCommand io = do
 	argv <- liftIO System.Environment.getArgs
 	let parsed = parseOptions argv
 	case parsedOptions parsed of
-		Just opts -> return (opts, parsedArguments parsed)
+		Just opts -> io opts (parsedArguments parsed)
 		Nothing -> liftIO $ case parsedError parsed of
 			Just err -> do
 				hPutStrLn stderr (parsedHelp parsed)
@@ -838,10 +837,8 @@ getOptionsOrDie = do
 				hPutStr stdout (parsedHelp parsed)
 				exitSuccess
 
--- | See 'runSubcommand'.
 data Subcommand cmdOpts action = Subcommand String [OptionInfo] (TokensFor cmdOpts -> Either String action)
 
--- | See 'runSubcommand'.
 subcommand :: (Options cmdOpts, Options subcmdOpts)
            => String -- ^ The subcommand name.
            -> (cmdOpts -> subcmdOpts -> [String] -> action) -- ^ The action to run.
@@ -882,7 +879,7 @@ findSubcmd subcommands name tokens = subcmd where
 -- Example:
 --
 -- @
---runSubcommand :: Options cmdOpts => [Subcommand cmdOpts (IO ())] -> IO ()
+--runSubcommand :: Options cmdOpts => [Subcommand cmdOpts (IO a)] -> IO a
 --runSubcommand subcommands = do
 --    argv <- System.Environment.getArgs
 --    let parsed = 'parseSubcommand' subcommands argv
@@ -919,14 +916,19 @@ parseSubcommand subcommands argv = parsed where
 -- them to this computation to select one and run it. If the user specifies
 -- an invalid subcommand, this computation will print an error and call
 -- 'exitFailure'. In handling of invalid flags or @--help@, 'runSubcommand'
--- acts like 'getOptionsOrDie'.
+-- acts like 'runCommand'.
 --
 -- @
+--{-\# LANGUAGE TemplateHaskell \#-}
+--
+--import Control.Monad (unless)
+--import Options
+--
 --'defineOptions' \"MainOptions\" $ do
 --    'boolOption' \"optQuiet\" \"quiet\" False \"Whether to be quiet.\"
 --
 --'defineOptions' \"HelloOpts\" $ do
---    stringOption \"optHello\" \"hello\" \"Hello!\" \"How to say hello.\"
+--    'stringOption' \"optHello\" \"hello\" \"Hello!\" \"How to say hello.\"
 --
 --'defineOptions' \"ByeOpts\" $ do
 --    'stringOption' \"optName\" \"name\" \"\" \"The user's name.\"
@@ -954,7 +956,7 @@ parseSubcommand subcommands argv = parsed where
 -- >Good bye 
 -- >$ ./app bye --name='John'
 -- >Good bye John
-runSubcommand :: (Options cmdOpts, MonadIO m) => [Subcommand cmdOpts (m ())] -> m ()
+runSubcommand :: (Options opts, MonadIO m) => [Subcommand opts (m a)] -> m a
 runSubcommand subcommands = do
 	argv <- liftIO System.Environment.getArgs
 	let parsed = parseSubcommand subcommands argv

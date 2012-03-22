@@ -31,8 +31,7 @@ description:
   &#x20;       \"Whether to be quiet.\"
   &#x20;
   main :: IO ()
-  main = do
-  &#x20;   (opts, args) <- getOptionsOrDie
+  main = runCommand $ \\opts args -> do
   &#x20;   if optQuiet opts
   &#x20;       then return ()
   &#x20;       else putStrLn (optMessage opts)
