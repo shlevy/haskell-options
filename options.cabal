@@ -32,7 +32,7 @@ description:
   &#x20;
   main :: IO ()
   main = do
-  &#x20;   opts <- getOptionsOrDie
+  &#x20;   (opts, args) <- getOptionsOrDie
   &#x20;   if optQuiet opts
   &#x20;       then return ()
   &#x20;       else putStrLn (optMessage opts)
