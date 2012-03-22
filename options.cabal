@@ -64,6 +64,7 @@ extra-source-files:
   --
   tests/options-tests.cabal
   tests/OptionsTests.hs
+  tests/OptionsTests/Defaults.hs
   tests/OptionsTests/Help.hs
   tests/OptionsTests/OptionTypes.hs
   tests/OptionsTests/Tokenize.hs
