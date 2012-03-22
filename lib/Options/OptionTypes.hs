@@ -297,6 +297,8 @@ parseMaybe p s = case s of
 		Left err -> Left err
 		Right a -> Right (Just a)
 
+$([d| |])
+
 -- | Store an option as a @'Set.Set'@, using another option type for the
 -- elements. The separator should be a character that will not occur within
 -- the values, such as a comma or semicolon.

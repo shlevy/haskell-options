@@ -49,7 +49,7 @@
 --
 module Options
 	(
-	-- * 
+	-- * Options
 	  Options
 	, defaultOptions
 	

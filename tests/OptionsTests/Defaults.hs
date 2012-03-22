@@ -22,7 +22,7 @@ import           Test.Chell
 
 import           Options
 
-defineOptions "AllOptions" $ do
+$(defineOptions "AllOptions" $ do
 	-- Simple option definitions
 	boolOption "s_Bool" "s_bool" True ""
 	stringOption "s_String" "s_string" "abc" ""
@@ -154,6 +154,7 @@ defineOptions "AllOptions" $ do
 			]
 		, optionDefault = "true"
 		})
+	)
 
 test_Defaults :: Suite
 test_Defaults = assertions "defaults" $ do
