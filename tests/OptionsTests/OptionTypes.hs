@@ -41,6 +41,7 @@ test_OptionTypes = suite "option-types"
 	, test_Integer
 	, test_Float
 	, test_Double
+	, test_Maybe
 	, test_List
 	, test_Set
 	, test_Map
@@ -321,6 +322,16 @@ test_Double = assertions "double" $ do
 	$expect (valid "1.5" (1.5 :: Double))
 	$expect (valid "3e5" (3e5 :: Double))
 	$expect (invalid "a" "invalid double: \"a\"")
+
+test_Maybe :: Suite
+test_Maybe = assertions "maybe" $ do
+	let t = optionTypeMaybe optionTypeInt
+	let valid = parseValid t
+	let invalid = parseInvalid t
+	
+	$expect (valid "" Nothing)
+	$expect (valid "1" (Just 1))
+	$expect (invalid "a" "invalid int: \"a\"")
 
 test_List :: Suite
 test_List = assertions "list" $ do

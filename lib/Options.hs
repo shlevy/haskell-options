@@ -116,6 +116,7 @@ module Options
 	, optionTypeFloat
 	, optionTypeDouble
 	
+	, optionTypeMaybe
 	, optionTypeList
 	, optionTypeSet
 	, optionTypeMap

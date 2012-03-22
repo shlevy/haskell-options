@@ -126,6 +126,11 @@ defineOptions "AllOptions" $ do
 		, optionType = optionTypeDouble
 		, optionDefault = "123.5"
 		})
+	option "t_Maybe" (\o -> o
+		{ optionLongFlags = ["t_Maybe"]
+		, optionType = optionTypeMaybe optionTypeBool
+		, optionDefault = "true"
+		})
 	option "t_List" (\o -> o
 		{ optionLongFlags = ["t_List"]
 		, optionType = optionTypeList ',' optionTypeBool
@@ -185,6 +190,7 @@ test_Defaults = assertions "defaults" $ do
 	$expect (equal (t_Integer def) (123 :: Integer))
 	$expect (equal (t_Float def) (123.5 :: Float))
 	$expect (equal (t_Double def) (123.5 :: Double))
+	$expect (equal (t_Maybe def) (Just True :: Maybe Bool))
 	$expect (equal (t_List def) ([True,False] :: [Bool]))
 	$expect (equal (t_Set def) (Set.fromList [True, False] :: Set Bool))
 	$expect (equal (t_Map def) (Map.fromList [("true", True), ("false", False)] :: Map String Bool))

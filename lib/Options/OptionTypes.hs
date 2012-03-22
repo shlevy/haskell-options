@@ -276,6 +276,27 @@ optionTypeFloat = OptionType (ConT ''Float) False (parseFloat "float") [| parseF
 optionTypeDouble :: OptionType Double
 optionTypeDouble = OptionType (ConT ''Double) False (parseFloat "double") [| parseFloat "double" |]
 
+-- | Store an option as a @'Maybe'@ of another type. The value will be
+-- @Nothing@ if the option was not provided or is an empty string.
+--
+-- @
+--'option' \"optTimeout\" (\\o -> o
+--    { 'optionLongFlags' = [\"timeout\"]
+--    , 'optionType' = 'optionTypeMaybe' 'optionTypeInt'
+--    })
+-- @
+optionTypeMaybe :: OptionType a -> OptionType (Maybe a)
+optionTypeMaybe (OptionType valType unary valParse valParseExp) = OptionType (AppT (ConT ''Maybe) valType) unary
+	(parseMaybe valParse)
+	[| parseMaybe $valParseExp |]
+
+parseMaybe :: (String -> Either String a) -> String -> Either String (Maybe a)
+parseMaybe p s = case s of
+	"" -> Right (Nothing)
+	_ -> case p s of
+		Left err -> Left err
+		Right a -> Right (Just a)
+
 -- | Store an option as a @'Set.Set'@, using another option type for the
 -- elements. The separator should be a character that will not occur within
 -- the values, such as a comma or semicolon.
