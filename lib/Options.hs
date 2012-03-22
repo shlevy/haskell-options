@@ -184,6 +184,9 @@ data OptionsMeta a = OptionsMeta
 	, optionsMetaLongFlags :: Set.Set String
 	}
 
+-- | An options value containing only the default values for each option.
+-- This is equivalent to the options value when parsing an empty argument
+-- list.
 defaultOptions :: Options a => a
 defaultOptions = opts where
 	parsed = parseOptions []
