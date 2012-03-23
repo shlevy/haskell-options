@@ -10,6 +10,7 @@ module OptionsTests.StringParsing
 	) where
 
 import           Prelude hiding (FilePath)
+import           Control.Monad (unless)
 import           Data.Text ()
 
 import qualified Filesystem.Path.Rules as Path
@@ -71,12 +72,19 @@ $(defineOptions "StringOptions" $ do
 		})
 	)
 
+windowsBuild :: Bool
+#ifdef CABAL_OS_WINDOWS
+windowsBuild = True
+#else
+windowsBuild = False
+#endif
+
 test_StringParsing :: Suite
 test_StringParsing = suite "string-parsing"
 	[ test_Defaults
 	, test_Ascii
 	, test_UnicodeValid
-	, test_UnicodeInvalid
+	, skipIf windowsBuild test_UnicodeInvalid
 	]
 
 test_Defaults :: Suite
@@ -91,7 +99,8 @@ test_Defaults = assertions "defaults" $ do
 	
 	$expect (equal (optPath_defA opts) (Path.decodeString Path.posix_ghc704 "a/b/c"))
 	$expect (equal (optPath_defU opts) (Path.decodeString Path.posix_ghc704 "\12354/b/c"))
-	$expect (equal (optPath_defB opts) (Path.decodeString Path.posix_ghc704 "\56507/b/c"))
+	unless windowsBuild $ do
+		$expect (equal (optPath_defB opts) (Path.decodeString Path.posix_ghc704 "\56507/b/c"))
 
 test_Ascii :: Suite
 test_Ascii = assertions "ascii" $ do
@@ -117,7 +126,7 @@ test_UnicodeValid = assertions "unicode-valid" $ do
 
 test_UnicodeInvalid :: Suite
 test_UnicodeInvalid = assertions "unicode-invalid" $ do
-#if __GLASGOW_HASKELL__ >= 704 || defined(CABAL_OS_WINDOWS)
+#if __GLASGOW_HASKELL__ >= 704
 	let parsed = parseOptions ["--string=\56507", "--text=\56507", "--path=\12354/\56507"]
 	let expectedString = "\56507"
 	let expectedText = "\65533"
