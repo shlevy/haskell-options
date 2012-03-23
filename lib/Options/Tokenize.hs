@@ -18,7 +18,7 @@ import           Options.Types
 data TokState = TokState
 	{ stArgv :: [String]
 	, stArgs :: [String]
-	, stOpts :: [(String, String)]
+	, stOpts :: [(String, (String, String))]
 	, stShortKeys :: Data.Map.Map Char (String, Bool)
 	, stLongKeys :: Data.Map.Map String (String, Bool)
 	, stSubcommands :: [(String, [OptionInfo])]
@@ -67,7 +67,7 @@ loop = do
 				([], _) -> addArg s
 				(_, Just _) -> addArg s
 				(_, Nothing) -> case lookup s (stSubcommands st) of
-					Nothing -> throwError ("unknown subcommand " ++ show s)
+					Nothing -> throwError ("Unknown subcommand " ++ show s ++ ".")
 					Just subOptions -> mergeSubcommand s subOptions
 
 nextItem :: Tok (Maybe String)
@@ -86,9 +86,9 @@ addOpt :: String -> String -> String -> Tok ()
 addOpt flag key val = do
 	oldOpts <- gets stOpts
 	case lookup key oldOpts of
-		Nothing -> modify (\st -> st { stOpts = stOpts st ++ [(key, val)] })
+		Nothing -> modify (\st -> st { stOpts = stOpts st ++ [(key, (flag, val))] })
 		-- TODO: include old and new values?
-		Just _ -> throwError ("duplicate value for option " ++ flag)
+		Just _ -> throwError ("Multiple values for flag " ++ flag ++ " were provided.")
 
 mergeSubcommand :: String -> [OptionInfo] -> Tok ()
 mergeSubcommand name opts = modify $ \st -> st
@@ -103,16 +103,16 @@ parseLong optName = do
 	case break (== '=') optName of
 		(before, after) -> case after of
 			'=' : value -> case Data.Map.lookup before longKeys of
-				Nothing -> throwError ("Unknown option: --" ++ before)
+				Nothing -> throwError ("Unknown flag --" ++ before)
 				Just (key, _) -> addOpt ("--" ++ before) key value
 			_ -> case Data.Map.lookup optName longKeys of
-				Nothing -> throwError ("Unknown option: --" ++ optName)
+				Nothing -> throwError ("Unknown flag --" ++ optName)
 				Just (key, unary) -> if unary
 					then addOpt ("--" ++ optName) key "true"
 					else do
 						next <- nextItem
 						case next of
-							Nothing -> throwError ("option --" ++ optName ++ " requires an argument")
+							Nothing -> throwError ("The flag --" ++ optName ++ " requires an argument.")
 							Just value -> addOpt ("--" ++ optName) key value
 
 parseShort :: Char -> String -> Tok ()
@@ -120,7 +120,7 @@ parseShort optChar optValue = do
 	let optName = '-' : [optChar]
 	shortKeys <- gets stShortKeys
 	case Data.Map.lookup optChar shortKeys of
-		Nothing -> throwError ("Unknown option: " ++ optName)
+		Nothing -> throwError ("Unknown flag " ++ optName)
 		Just (key, unary) -> if unary
 			then do
 				addOpt optName key "true"
@@ -131,7 +131,7 @@ parseShort optChar optValue = do
 				"" -> do
 					next <- nextItem
 					case next of
-						Nothing -> throwError ("option " ++ optName ++ " requires an argument")
+						Nothing -> throwError ("The flag " ++ optName ++ " requires an argument.")
 						Just value -> addOpt optName key value
 				_ -> addOpt optName key optValue
 

@@ -201,7 +201,7 @@ defaultOptions = opts where
 	parsed = parseOptions []
 	opts = case parsedOptions parsed of
 		Just v -> v
-		Nothing -> error ("defaultOptions: Internal error, option defaults are invalid: " ++ (case parsedError parsed of
+		Nothing -> error ("Internal error while parsing default options: " ++ (case parsedError parsed of
 			Just err -> err
 			Nothing -> "(no error provided)"))
 
@@ -373,7 +373,7 @@ option fieldName f = do
 	
 	case parseOptType def of
 		Right _ -> return ()
-		Left err -> OptionsM (throwError ("Invalid default vaue for option " ++ show fieldName ++ ": " ++ err))
+		Left err -> OptionsM (throwError ("Invalid default value for option " ++ show fieldName ++ ": " ++ err))
 	
 	OptionsM (modify (\st -> st
 		{ stSeenFieldNames = Set.insert fieldName (stSeenFieldNames st)
@@ -391,12 +391,14 @@ option fieldName f = do
 parseOptionTok :: String -> (String -> Either String a) -> String -> ParserM optType a
 parseOptionTok key p def = do
 	TokensFor tokens _ <- ParserM (\t -> Right t)
-	let val = case lookup key tokens of
-		Nothing -> def
-		Just x -> decodeString x
-	case p val of
-		Left err -> ParserM (\_ -> Left err)
-		Right x -> return x
+	case lookup key tokens of
+		Nothing -> case p def of
+			-- shouldn't happen
+			Left err -> ParserM (\_ -> Left ("Internal error while parsing default options: " ++ err))
+			Right a -> return a
+		Just (flagName, val) -> case p (decodeString val) of
+			Left err -> ParserM (\_ -> Left ("Value for flag " ++ flagName ++ " is invalid: " ++ err))
+			Right a -> return a
 
 decodeString :: String -> String
 #if __GLASGOW_HASKELL__ >= 702 || defined(CABAL_OS_WINDOWS)
@@ -442,14 +444,14 @@ checkValidFlags :: String -> [Char] -> [String] -> OptionsM ()
 checkValidFlags fieldName shorts longs = do
 	-- Check that at least one flag is defined (in either 'shorts' or 'longs').
 	when (length shorts == 0 && length longs == 0)
-		(OptionsM (throwError ("Option " ++ show fieldName ++ " does not define any flags")))
+		(OptionsM (throwError ("Option " ++ show fieldName ++ " does not define any flags.")))
 	
 	-- Check that 'shorts' contains only non-repeated letters and digits
 	when (hasDuplicates shorts)
-		(OptionsM (throwError ("Option " ++ show fieldName ++ " has duplicate short flags")))
+		(OptionsM (throwError ("Option " ++ show fieldName ++ " has duplicate short flags.")))
 	case filter (not . isAlphaNum) shorts of
 		[] -> return ()
-		invalid -> OptionsM (throwError ("Option " ++ show fieldName ++ " has invalid short flags " ++ show invalid))
+		invalid -> OptionsM (throwError ("Option " ++ show fieldName ++ " has invalid short flags " ++ show invalid ++ "."))
 	
 	-- Check that 'longs' contains only non-repeated, non-empty strings
 	-- containing {LETTER,DIGIT,-,_} and starting with a letter.
@@ -457,7 +459,7 @@ checkValidFlags fieldName shorts longs = do
 		(OptionsM (throwError ("Option " ++ show fieldName ++ " has duplicate long flags.")))
 	case filter (not . validLongFlag) longs of
 		[] -> return ()
-		invalid -> OptionsM (throwError ("Option " ++ show fieldName ++ " has invalid long flags " ++ show invalid))
+		invalid -> OptionsM (throwError ("Option " ++ show fieldName ++ " has invalid long flags " ++ show invalid ++ "."))
 
 checkUniqueFlags :: String -> [Char] -> [String] -> OptionsM ()
 checkUniqueFlags fieldName shorts longs = do
@@ -472,7 +474,7 @@ checkUniqueFlags fieldName shorts longs = do
 		return ("--" ++ f)
 	let dups = dupShort ++ dupLong
 	unless (null dups)
-		(OptionsM (throwError ("Option " ++ show fieldName ++ " uses already-defined flags " ++ show dups)))
+		(OptionsM (throwError ("Option " ++ show fieldName ++ " uses already-defined flags " ++ show dups ++ ".")))
 
 validLongFlag :: String -> Bool
 validLongFlag = valid where
@@ -543,7 +545,7 @@ options fieldName (ImportedOptions meta) = do
 		return ("--" ++ f)
 	let dups = dupShort ++ dupLong
 	unless (null dups)
-		(OptionsM (throwError ("Imported options type " ++ show typeName ++ " contains conflicting definitions for flags " ++ show dups)))
+		(OptionsM (throwError ("Imported options type " ++ show typeName ++ " contains conflicting definitions for flags " ++ show dups ++ ".")))
 	
 	OptionsM (modify (\st' -> st'
 		{ stSeenFieldNames = Set.insert fieldName (stSeenFieldNames st)
@@ -892,7 +894,7 @@ findSubcmd :: [Subcommand cmdOpts action] -> String -> TokensFor cmdOpts -> Eith
 findSubcmd subcommands name tokens = subcmd where
 	asoc = [(n, cmd) | cmd@(Subcommand n _ _) <- subcommands]
 	subcmd = case lookup name asoc of
-		Nothing -> Left ("Unknown subcommand: " ++ show name)
+		Nothing -> Left ("Unknown subcommand " ++ show name ++ ".")
 		Just (Subcommand _ _ checkTokens) -> checkTokens tokens
 
 -- | Attempt to convert a list of command-line arguments into a subcommand

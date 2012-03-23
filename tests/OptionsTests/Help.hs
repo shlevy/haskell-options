@@ -178,7 +178,7 @@ test_AddHelpFlags_Subcommand = assertions "subcommand" $ do
 
 test_CheckHelpFlag :: Suite
 test_CheckHelpFlag = assertions "checkHelpFlag" $ do
-	let checkFlag keys = equal (checkHelpFlag (TokensFor [(k, "true") | k <- keys] []))
+	let checkFlag keys = equal (checkHelpFlag (TokensFor [(k, ("-h", "true")) | k <- keys] []))
 	
 	$expect (checkFlag [] Nothing)
 	$expect (checkFlag ["main:Options.Help:optHelpSummary"] (Just HelpSummary))

@@ -60,7 +60,7 @@ test_Bool :: Suite
 test_Bool = assertions "bool" $ do
 	$expect (parseValid optionTypeBool "true" True)
 	$expect (parseValid optionTypeBool "false" False)
-	$expect (parseInvalid optionTypeBool "" "invalid boolean value: \"\"")
+	$expect (parseInvalid optionTypeBool "" "\"\" is not in {\"true\", \"false\"}.")
 
 test_String :: Suite
 test_String = assertions "string" $ do
@@ -110,14 +110,16 @@ test_Int = assertions "int" $ do
 	
 	$expect (valid "-1" (-1 :: Int))
 	$expect (valid "1" (1 :: Int))
-	$expect (invalid "a" "invalid int: \"a\"")
+	$expect (invalid "a" "\"a\" is not an integer.")
 	
 	let pastMin = show (toInteger (minBound :: Int) - 1)
 	let pastMax = show (toInteger (maxBound :: Int) + 1)
-	$expect (invalid pastMin ("invalid int: " ++ show pastMin))
+	let errBounds = " is not within bounds [" ++ show (minBound :: Int) ++ ":" ++ show (maxBound :: Int) ++ "] of type int."
+	
+	$expect (invalid pastMin (pastMin ++ errBounds))
 	$expect (valid (show (minBound :: Int)) minBound)
 	$expect (valid (show (maxBound :: Int)) maxBound)
-	$expect (invalid pastMax ("invalid int: " ++ show pastMax))
+	$expect (invalid pastMax (pastMax ++ errBounds))
 
 test_Int8 :: Suite
 test_Int8 = assertions "int8" $ do
@@ -126,14 +128,14 @@ test_Int8 = assertions "int8" $ do
 	
 	$expect (valid "-1" (-1 :: Int8))
 	$expect (valid "1" (1 :: Int8))
-	$expect (invalid "a" "invalid int8: \"a\"")
+	$expect (invalid "a" "\"a\" is not an integer.")
 	
 	let pastMin = show (toInteger (minBound :: Int8) - 1)
 	let pastMax = show (toInteger (maxBound :: Int8) + 1)
-	$expect (invalid pastMin ("invalid int8: " ++ show pastMin))
+	$expect (invalid pastMin "-129 is not within bounds [-128:127] of type int8.")
 	$expect (valid (show (minBound :: Int8)) minBound)
 	$expect (valid (show (maxBound :: Int8)) maxBound)
-	$expect (invalid pastMax ("invalid int8: " ++ show pastMax))
+	$expect (invalid pastMax "128 is not within bounds [-128:127] of type int8.")
 
 test_Int16 :: Suite
 test_Int16 = assertions "int16" $ do
@@ -142,14 +144,14 @@ test_Int16 = assertions "int16" $ do
 	
 	$expect (valid "-1" (-1 :: Int16))
 	$expect (valid "1" (1 :: Int16))
-	$expect (invalid "a" "invalid int16: \"a\"")
+	$expect (invalid "a" "\"a\" is not an integer.")
 	
 	let pastMin = show (toInteger (minBound :: Int16) - 1)
 	let pastMax = show (toInteger (maxBound :: Int16) + 1)
-	$expect (invalid pastMin ("invalid int16: " ++ show pastMin))
+	$expect (invalid pastMin "-32769 is not within bounds [-32768:32767] of type int16.")
 	$expect (valid (show (minBound :: Int16)) minBound)
 	$expect (valid (show (maxBound :: Int16)) maxBound)
-	$expect (invalid pastMax ("invalid int16: " ++ show pastMax))
+	$expect (invalid pastMax "32768 is not within bounds [-32768:32767] of type int16.")
 
 test_Int32 :: Suite
 test_Int32 = assertions "int32" $ do
@@ -158,14 +160,14 @@ test_Int32 = assertions "int32" $ do
 	
 	$expect (valid "-1" (-1 :: Int32))
 	$expect (valid "1" (1 :: Int32))
-	$expect (invalid "a" "invalid int32: \"a\"")
+	$expect (invalid "a" "\"a\" is not an integer.")
 	
 	let pastMin = show (toInteger (minBound :: Int32) - 1)
 	let pastMax = show (toInteger (maxBound :: Int32) + 1)
-	$expect (invalid pastMin ("invalid int32: " ++ show pastMin))
+	$expect (invalid pastMin "-2147483649 is not within bounds [-2147483648:2147483647] of type int32.")
 	$expect (valid (show (minBound :: Int32)) minBound)
 	$expect (valid (show (maxBound :: Int32)) maxBound)
-	$expect (invalid pastMax ("invalid int32: " ++ show pastMax))
+	$expect (invalid pastMax "2147483648 is not within bounds [-2147483648:2147483647] of type int32.")
 
 test_Int64 :: Suite
 test_Int64 = assertions "int64" $ do
@@ -174,95 +176,97 @@ test_Int64 = assertions "int64" $ do
 	
 	$expect (valid "-1" (-1 :: Int64))
 	$expect (valid "1" (1 :: Int64))
-	$expect (invalid "a" "invalid int64: \"a\"")
+	$expect (invalid "a" "\"a\" is not an integer.")
 	
 	let pastMin = show (toInteger (minBound :: Int64) - 1)
 	let pastMax = show (toInteger (maxBound :: Int64) + 1)
-	$expect (invalid pastMin ("invalid int64: " ++ show pastMin))
+	$expect (invalid pastMin "-9223372036854775809 is not within bounds [-9223372036854775808:9223372036854775807] of type int64.")
 	$expect (valid (show (minBound :: Int64)) minBound)
 	$expect (valid (show (maxBound :: Int64)) maxBound)
-	$expect (invalid pastMax ("invalid int64: " ++ show pastMax))
+	$expect (invalid pastMax "9223372036854775808 is not within bounds [-9223372036854775808:9223372036854775807] of type int64.")
 
 test_Word :: Suite
 test_Word = assertions "word" $ do
 	let valid = parseValid optionTypeWord
 	let invalid = parseInvalid optionTypeWord
 	
-	$expect (invalid "-1" "invalid word: \"-1\"")
+	let pastMax = show (toInteger (maxBound :: Word) + 1)
+	let errBounds = " is not within bounds [0:" ++ show (maxBound :: Word) ++ "] of type word."
+	
+	$expect (invalid "-1" ("-1" ++ errBounds))
 	$expect (valid "0" (0 :: Word))
 	$expect (valid "1" (1 :: Word))
-	$expect (invalid "a" "invalid word: \"a\"")
+	$expect (invalid "a" "\"a\" is not an integer.")
 	
-	let pastMax = show (toInteger (maxBound :: Word) + 1)
 	$expect (valid (show (maxBound :: Word)) maxBound)
-	$expect (invalid pastMax ("invalid word: " ++ show pastMax))
+	$expect (invalid pastMax (pastMax ++ errBounds))
 
 test_Word8 :: Suite
 test_Word8 = assertions "word8" $ do
 	let valid = parseValid optionTypeWord8
 	let invalid = parseInvalid optionTypeWord8
 	
-	$expect (invalid "-1" "invalid word8: \"-1\"")
+	$expect (invalid "-1" "-1 is not within bounds [0:255] of type word8.")
 	$expect (valid "0" (0 :: Word8))
 	$expect (valid "1" (1 :: Word8))
-	$expect (invalid "a" "invalid word8: \"a\"")
+	$expect (invalid "a" "\"a\" is not an integer.")
 	
 	let pastMax = show (toInteger (maxBound :: Word8) + 1)
 	$expect (valid (show (maxBound :: Word8)) maxBound)
-	$expect (invalid pastMax ("invalid word8: " ++ show pastMax))
+	$expect (invalid pastMax "256 is not within bounds [0:255] of type word8.")
 
 test_Word16 :: Suite
 test_Word16 = assertions "word16" $ do
 	let valid = parseValid optionTypeWord16
 	let invalid = parseInvalid optionTypeWord16
 	
-	$expect (invalid "-1" "invalid word16: \"-1\"")
+	$expect (invalid "-1" "-1 is not within bounds [0:65535] of type word16.")
 	$expect (valid "0" (0 :: Word16))
 	$expect (valid "1" (1 :: Word16))
-	$expect (invalid "a" "invalid word16: \"a\"")
+	$expect (invalid "a" "\"a\" is not an integer.")
 	
 	let pastMax = show (toInteger (maxBound :: Word16) + 1)
 	$expect (valid (show (maxBound :: Word16)) maxBound)
-	$expect (invalid pastMax ("invalid word16: " ++ show pastMax))
+	$expect (invalid pastMax "65536 is not within bounds [0:65535] of type word16.")
 
 test_Word32 :: Suite
 test_Word32 = assertions "word32" $ do
 	let valid = parseValid optionTypeWord32
 	let invalid = parseInvalid optionTypeWord32
 	
-	$expect (invalid "-1" "invalid word32: \"-1\"")
+	$expect (invalid "-1" "-1 is not within bounds [0:4294967295] of type word32.")
 	$expect (valid "0" (0 :: Word32))
 	$expect (valid "1" (1 :: Word32))
-	$expect (invalid "a" "invalid word32: \"a\"")
+	$expect (invalid "a" "\"a\" is not an integer.")
 	
 	let pastMax = show (toInteger (maxBound :: Word32) + 1)
 	$expect (valid (show (maxBound :: Word32)) maxBound)
-	$expect (invalid pastMax ("invalid word32: " ++ show pastMax))
+	$expect (invalid pastMax "4294967296 is not within bounds [0:4294967295] of type word32.")
 
 test_Word64 :: Suite
 test_Word64 = assertions "word64" $ do
 	let valid = parseValid optionTypeWord64
 	let invalid = parseInvalid optionTypeWord64
 	
-	$expect (invalid "-1" "invalid word64: \"-1\"")
+	$expect (invalid "-1" "-1 is not within bounds [0:18446744073709551615] of type word64.")
 	$expect (valid "0" (0 :: Word64))
 	$expect (valid "1" (1 :: Word64))
-	$expect (invalid "a" "invalid word64: \"a\"")
+	$expect (invalid "a" "\"a\" is not an integer.")
 	
 	let pastMax = show (toInteger (maxBound :: Word64) + 1)
 	$expect (valid (show (maxBound :: Word64)) maxBound)
-	$expect (invalid pastMax ("invalid word64: " ++ show pastMax))
+	$expect (invalid pastMax "18446744073709551616 is not within bounds [0:18446744073709551615] of type word64.")
 
 test_Integer :: Suite
 test_Integer = assertions "integer" $ do
 	let valid = parseValid optionTypeInteger
 	let invalid = parseInvalid optionTypeInteger
 	
-	$expect (invalid "" "invalid integer: \"\"")
+	$expect (invalid "" "\"\" is not an integer.")
 	$expect (valid "-1" (-1 :: Integer))
 	$expect (valid "0" (0 :: Integer))
 	$expect (valid "1" (1 :: Integer))
-	$expect (invalid "a" "invalid integer: \"a\"")
+	$expect (invalid "a" "\"a\" is not an integer.")
 
 test_Float :: Suite
 test_Float = assertions "float" $ do
@@ -274,7 +278,7 @@ test_Float = assertions "float" $ do
 	$expect (valid "1" (1 :: Float))
 	$expect (valid "1.5" (1.5 :: Float))
 	$expect (valid "3e5" (3e5 :: Float))
-	$expect (invalid "a" "invalid float: \"a\"")
+	$expect (invalid "a" "\"a\" is not a number.")
 
 test_Double :: Suite
 test_Double = assertions "double" $ do
@@ -286,7 +290,7 @@ test_Double = assertions "double" $ do
 	$expect (valid "1" (1 :: Double))
 	$expect (valid "1.5" (1.5 :: Double))
 	$expect (valid "3e5" (3e5 :: Double))
-	$expect (invalid "a" "invalid double: \"a\"")
+	$expect (invalid "a" "\"a\" is not a number.")
 
 test_Maybe :: Suite
 test_Maybe = assertions "maybe" $ do
@@ -296,7 +300,7 @@ test_Maybe = assertions "maybe" $ do
 	
 	$expect (valid "" Nothing)
 	$expect (valid "1" (Just 1))
-	$expect (invalid "a" "invalid int: \"a\"")
+	$expect (invalid "a" "\"a\" is not an integer.")
 
 test_List :: Suite
 test_List = assertions "list" $ do
@@ -308,7 +312,7 @@ test_List = assertions "list" $ do
 	$expect (valid "1" [1])
 	$expect (valid "1,2,3" [1, 2, 3])
 	$expect (valid "1,1,2,3" [1, 1, 2, 3])
-	$expect (invalid "1,a,3" "invalid int: \"a\"")
+	$expect (invalid "1,a,3" "\"a\" is not an integer.")
 
 test_Set :: Suite
 test_Set = assertions "set" $ do
@@ -320,7 +324,7 @@ test_Set = assertions "set" $ do
 	$expect (valid "1" (Set.fromList [1]))
 	$expect (valid "1,2,3" (Set.fromList [1, 2, 3]))
 	$expect (valid "1,1,2,3" (Set.fromList [1, 2, 3]))
-	$expect (invalid "1,a,3" "invalid int: \"a\"")
+	$expect (invalid "1,a,3" "\"a\" is not an integer.")
 
 test_Map :: Suite
 test_Map = assertions "map" $ do
@@ -332,10 +336,10 @@ test_Map = assertions "map" $ do
 	$expect (valid "1=100" (Map.fromList [(1, 100)]))
 	$expect (valid "1=100,2=200,3=300" (Map.fromList [(1, 100), (2, 200), (3, 300)]))
 	$expect (valid "1=100,2=200,1=300" (Map.fromList [(1, 300), (2, 200)]))
-	$expect (invalid "a=1" "invalid int: \"a\"")
-	$expect (invalid "1=a" "invalid int: \"a\"")
-	$expect (invalid "1=" "invalid int: \"\"")
-	$expect (invalid "1" "invalid map item with no value: \"1\"")
+	$expect (invalid "a=1" "\"a\" is not an integer.")
+	$expect (invalid "1=a" "\"a\" is not an integer.")
+	$expect (invalid "1=" "\"\" is not an integer.")
+	$expect (invalid "1" "Map item \"1\" has no value.")
 
 data TestEnum = Enum1 | Enum2 | Enum3
 	deriving (Enum, Eq, Show)
@@ -352,4 +356,4 @@ test_Enum = assertions "enum" $ do
 	
 	$expect (valid "e1" Enum1)
 	$expect (valid "e2" Enum2)
-	$expect (invalid "e4" "invalid enum value: \"e4\"")
+	$expect (invalid "e4" "\"e4\" is not in {\"e1\", \"e2\", \"e3\"}.")

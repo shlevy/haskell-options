@@ -28,4 +28,4 @@ data OptionInfo = OptionInfo
 	}
 	deriving (Eq, Show)
 
-data TokensFor a = TokensFor [(String, String)] [String]
+data TokensFor a = TokensFor [(String, (String, String))] [String]

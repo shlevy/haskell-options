@@ -7,6 +7,7 @@
 module Options.OptionTypes where
 
 import           Data.Int
+import           Data.List (intercalate)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.Text as Text
@@ -102,7 +103,7 @@ parseBool s = case s of
 	"true" -> Right True
 	"false" -> Right False
 	-- TODO: include option flag
-	_ -> Left ("invalid boolean value: " ++ show s)
+	_ -> Left (show s ++ " is not in {\"true\", \"false\"}.")
 
 -- | Store an option value as a @'String'@. The value is decoded to Unicode
 -- first, if needed. The value may contain non-Unicode bytes, in which case
@@ -133,11 +134,11 @@ parsePath s = Right (Path.decodeString Path.posix_ghc702 s)
 parsePath s = Right (Path.decodeString Path.posix_ghc704 s)
 #endif
 
-parseInteger :: String -> String -> Either String Integer
-parseInteger label s = parsed where
+parseInteger :: String -> Either String Integer
+parseInteger s = parsed where
 	parsed = if valid
 		then Right (read s)
-		else Left ("invalid " ++ label ++ ": " ++ show s)
+		else Left (show s ++ " is not an integer.")
 	valid = case s of
 		[] -> False
 		'-':s' -> allDigits s'
@@ -151,16 +152,16 @@ parseBoundedIntegral label = parse where
 	
 	(minInt, maxInt) = getBounds parse minBound maxBound
 	
-	parse s = case parseInteger label s of
+	parse s = case parseInteger s of
 		Left err -> Left err
-		Right int -> if minInt <= int && int <= maxInt
-			then Right (fromInteger int)
-			else Left ("invalid " ++ label ++ ": " ++ show s)
+		Right int -> if int < minInt || int > maxInt
+			then Left (show int ++ " is not within bounds [" ++ show minInt ++ ":" ++ show maxInt ++ "] of type " ++ label ++ ".")
+			else Right (fromInteger int)
 
-parseFloat :: Read a => String -> String -> Either String a
-parseFloat label s = case reads s of
+parseFloat :: Read a => String -> Either String a
+parseFloat s = case reads s of
 	[(x, "")] -> Right x
-	_ -> Left ("invalid " ++ label ++ ": " ++ show s)
+	_ -> Left (show s ++ " is not a number.")
 
 -- | Store an option as an @'Int'@. The option value must be an integer /n/
 -- such that @'minBound' <= n <= 'maxBound'@.
@@ -215,21 +216,21 @@ optionTypeWord64 = OptionType (ConT ''Word64) False (parseBoundedIntegral "word6
 -- | Store an option as an @'Integer'@. The option value must be an integer.
 -- There is no minimum or maximum value.
 optionTypeInteger :: OptionType Integer
-optionTypeInteger = OptionType (ConT ''Integer) False (parseInteger "integer") [| parseInteger "integer" |]
+optionTypeInteger = OptionType (ConT ''Integer) False parseInteger [| parseInteger |]
 
 -- | Store an option as a @'Float'@. The option value must be a number. Due to
 -- the imprecision of floating-point math, the stored value might not exactly
 -- match the user's input. If the user's input is out of range for the
 -- @'Float'@ type, it will be stored as @Infinity@ or @-Infinity@.
 optionTypeFloat :: OptionType Float
-optionTypeFloat = OptionType (ConT ''Float) False (parseFloat "float") [| parseFloat "float" |]
+optionTypeFloat = OptionType (ConT ''Float) False parseFloat [| parseFloat |]
 
 -- | Store an option as a @'Double'@. The option value must be a number. Due to
 -- the imprecision of floating-point math, the stored value might not exactly
 -- match the user's input. If the user's input is out of range for the
 -- @'Double'@ type, it will be stored as @Infinity@ or @-Infinity@.
 optionTypeDouble :: OptionType Double
-optionTypeDouble = OptionType (ConT ''Double) False (parseFloat "double") [| parseFloat "double" |]
+optionTypeDouble = OptionType (ConT ''Double) False parseFloat [| parseFloat |]
 
 -- | Store an option as a @'Maybe'@ of another type. The value will be
 -- @Nothing@ if the option was not provided or is an empty string.
@@ -326,7 +327,7 @@ parseMap keySep pKey pVal = parsed where
 		Right xs -> Right (Map.fromList xs)
 	pItem s = case break (== keySep) s of
 		(sKey, valAndSep) -> case valAndSep of
-			[] -> Left ("invalid map item with no value: " ++ show s)
+			[] -> Left ("Map item " ++ show s ++ " has no value.")
 			_ : sVal -> case pKey sKey of
 				Left err -> Left err
 				Right key -> case pVal sVal of
@@ -390,11 +391,12 @@ optionTypeList sep (OptionType valType _ valParse valParseExp) = OptionType (App
 optionTypeEnum :: Enum a => Name -> [(String, a)] -> OptionType a
 optionTypeEnum typeName values = do
 	let intlist = [(k, fromEnum v) | (k, v) <- values]
+	let setString = "{" ++ intercalate ", " [show k | (k, _) <- values] ++ "}."
 	OptionType (ConT typeName) False
 		(\s -> case lookup s values of
 			Just v -> Right v
-			Nothing -> Left ("invalid enum value: " ++ show s))
+			Nothing -> Left (show s ++ " is not in " ++ setString))
 		[| \s -> case lookup s intlist of
 			Just v -> Right (toEnum v)
 			-- TODO: include option flag and available values
-			Nothing -> Left ("invalid enum value: " ++ show s) |]
+			Nothing -> Left (show s ++ " is not in " ++ setString) |]

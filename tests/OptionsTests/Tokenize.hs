@@ -87,7 +87,7 @@ test_ShortFlag = assertions "short-flag" $ do
 		$assert (right eTokens)
 		
 		let Right (TokensFor tokens args) = eTokens
-		$expect (equal [("test.a", "foo")] tokens)
+		$expect (equal [("test.a", ("-a", "foo"))] tokens)
 		$expect (equal ["bar"] args)
 	do
 		let (subcmd, eTokens) = tokenize commandDefs ["-afoo", "bar"]
@@ -95,7 +95,7 @@ test_ShortFlag = assertions "short-flag" $ do
 		$assert (right eTokens)
 		
 		let Right (TokensFor tokens args) = eTokens
-		$expect (equal [("test.a", "foo")] tokens)
+		$expect (equal [("test.a", ("-a", "foo"))] tokens)
 		$expect (equal ["bar"] args)
 
 test_ShortFlagUnknown :: Suite
@@ -105,7 +105,7 @@ test_ShortFlagUnknown = assertions "short-flag-unknown" $ do
 	$assert (left eTokens)
 	
 	let Left err = eTokens
-	$expect (equal "Unknown option: -c" err)
+	$expect (equal "Unknown flag -c" err)
 
 test_ShortFlagMissing :: Suite
 test_ShortFlagMissing = assertions "short-flag-missing" $ do
@@ -114,7 +114,7 @@ test_ShortFlagMissing = assertions "short-flag-missing" $ do
 	$assert (left eTokens)
 	
 	let Left err = eTokens
-	$expect (equal "option -a requires an argument" err)
+	$expect (equal "The flag -a requires an argument." err)
 
 test_ShortFlagUnary :: Suite
 test_ShortFlagUnary = assertions "short-flag-unary" $ do
@@ -124,7 +124,7 @@ test_ShortFlagUnary = assertions "short-flag-unary" $ do
 		$assert (right eTokens)
 		
 		let Right (TokensFor tokens args) = eTokens
-		$expect (equal [("test.x", "true")] tokens)
+		$expect (equal [("test.x", ("-x", "true"))] tokens)
 		$expect (equal ["foo", "bar"] args)
 	do
 		let (subcmd, eTokens) = tokenize commandDefs ["-xy", "foo", "bar"]
@@ -132,7 +132,7 @@ test_ShortFlagUnary = assertions "short-flag-unary" $ do
 		$assert (right eTokens)
 		
 		let Right (TokensFor tokens args) = eTokens
-		$expect (equal [("test.x", "true"), ("test.y", "true")] tokens)
+		$expect (equal [("test.x", ("-x", "true")), ("test.y", ("-y", "true"))] tokens)
 		$expect (equal ["foo", "bar"] args)
 
 test_ShortFlagDuplicate :: Suite
@@ -143,21 +143,21 @@ test_ShortFlagDuplicate = assertions "short-flag-duplicate" $ do
 		$assert (left eTokens)
 		
 		let Left err = eTokens
-		$expect (equal "duplicate value for option -x" err)
+		$expect (equal "Multiple values for flag -x were provided." err)
 	do
 		let (subcmd, eTokens) = tokenize commandDefs ["-afoo", "-a", "foo"]
 		$expect (equal Nothing subcmd)
 		$assert (left eTokens)
 		
 		let Left err = eTokens
-		$expect (equal "duplicate value for option -a" err)
+		$expect (equal "Multiple values for flag -a were provided." err)
 	do
 		let (subcmd, eTokens) = tokenize commandDefs ["-afoo", "-afoo"]
 		$expect (equal Nothing subcmd)
 		$assert (left eTokens)
 		
 		let Left err = eTokens
-		$expect (equal "duplicate value for option -a" err)
+		$expect (equal "Multiple values for flag -a were provided." err)
 
 test_LongFlag :: Suite
 test_LongFlag = assertions "long-flag" $ do
@@ -167,7 +167,7 @@ test_LongFlag = assertions "long-flag" $ do
 		$assert (right eTokens)
 		
 		let Right (TokensFor tokens args) = eTokens
-		$expect (equal [("test.a", "foo")] tokens)
+		$expect (equal [("test.a", ("--long-a", "foo"))] tokens)
 		$expect (equal ["bar"] args)
 	do
 		let (subcmd, eTokens) = tokenize commandDefs ["--long-a=foo", "bar"]
@@ -175,7 +175,7 @@ test_LongFlag = assertions "long-flag" $ do
 		$assert (right eTokens)
 		
 		let Right (TokensFor tokens args) = eTokens
-		$expect (equal [("test.a", "foo")] tokens)
+		$expect (equal [("test.a", ("--long-a", "foo"))] tokens)
 		$expect (equal ["bar"] args)
 
 test_LongFlagUnknown :: Suite
@@ -186,14 +186,14 @@ test_LongFlagUnknown = assertions "long-flag-unknown" $ do
 		$assert (left eTokens)
 		
 		let Left err = eTokens
-		$expect (equal "Unknown option: --long-c" err)
+		$expect (equal "Unknown flag --long-c" err)
 	do
 		let (subcmd, eTokens) = tokenize commandDefs ["--long-c=foo", "bar"]
 		$expect (equal Nothing subcmd)
 		$assert (left eTokens)
 		
 		let Left err = eTokens
-		$expect (equal "Unknown option: --long-c" err)
+		$expect (equal "Unknown flag --long-c" err)
 
 test_LongFlagMissing :: Suite
 test_LongFlagMissing = assertions "long-flag-missing" $ do
@@ -202,7 +202,7 @@ test_LongFlagMissing = assertions "long-flag-missing" $ do
 	$assert (left eTokens)
 	
 	let Left err = eTokens
-	$expect (equal "option --long-a requires an argument" err)
+	$expect (equal "The flag --long-a requires an argument." err)
 
 test_LongFlagUnary :: Suite
 test_LongFlagUnary = assertions "long-flag-unary" $ do
@@ -212,7 +212,7 @@ test_LongFlagUnary = assertions "long-flag-unary" $ do
 		$assert (right eTokens)
 		
 		let Right (TokensFor tokens args) = eTokens
-		$expect (equal [("test.x", "true")] tokens)
+		$expect (equal [("test.x", ("--long-x", "true"))] tokens)
 		$expect (equal ["foo", "bar"] args)
 	do
 		let (subcmd, eTokens) = tokenize commandDefs ["--long-x=foo", "bar"]
@@ -220,7 +220,7 @@ test_LongFlagUnary = assertions "long-flag-unary" $ do
 		$assert (right eTokens)
 		
 		let Right (TokensFor tokens args) = eTokens
-		$expect (equal [("test.x", "foo")] tokens)
+		$expect (equal [("test.x", ("--long-x", "foo"))] tokens)
 		$expect (equal ["bar"] args)
 
 test_LongFlagDuplicate :: Suite
@@ -231,21 +231,21 @@ test_LongFlagDuplicate = assertions "long-flag-duplicate" $ do
 		$assert (left eTokens)
 		
 		let Left err = eTokens
-		$expect (equal "duplicate value for option --long-x" err)
+		$expect (equal "Multiple values for flag --long-x were provided." err)
 	do
 		let (subcmd, eTokens) = tokenize commandDefs ["-afoo", "--long-a", "foo"]
 		$expect (equal Nothing subcmd)
 		$assert (left eTokens)
 		
 		let Left err = eTokens
-		$expect (equal "duplicate value for option --long-a" err)
+		$expect (equal "Multiple values for flag --long-a were provided." err)
 	do
 		let (subcmd, eTokens) = tokenize commandDefs ["-afoo", "--long-a=foo"]
 		$expect (equal Nothing subcmd)
 		$assert (left eTokens)
 		
 		let Left err = eTokens
-		$expect (equal "duplicate value for option --long-a" err)
+		$expect (equal "Multiple values for flag --long-a were provided." err)
 
 test_EndFlags :: Suite
 test_EndFlags = assertions "end-flags" $ do
@@ -265,7 +265,7 @@ test_Subcommand = assertions "subcommand" $ do
 		$assert (right eTokens)
 		
 		let Right (TokensFor tokens args) = eTokens
-		$expect (equal [("test.x", "true"), ("sub.d", "foo"), ("sub.e", "true")] tokens)
+		$expect (equal [("test.x", ("-x", "true")), ("sub.d", ("-d", "foo")), ("sub.e", ("--long-e", "true"))] tokens)
 		$expect (equal ["bar"] args)
 	do
 		let (subcmd, eTokens) = tokenize subcommandDefs ["-x", "sub2", "-d", "foo", "--long-e", "bar"]
@@ -273,7 +273,7 @@ test_Subcommand = assertions "subcommand" $ do
 		$assert (right eTokens)
 		
 		let Right (TokensFor tokens args) = eTokens
-		$expect (equal [("test.x", "true"), ("sub.d", "true"), ("sub.e", "true")] tokens)
+		$expect (equal [("test.x", ("-x", "true")), ("sub.d", ("-d", "true")), ("sub.e", ("--long-e", "true"))] tokens)
 		$expect (equal ["foo", "bar"] args)
 
 test_SubcommandUnknown:: Suite
@@ -283,4 +283,4 @@ test_SubcommandUnknown = assertions "subcommand-unknown" $ do
 	$assert (left eTokens)
 	
 	let Left err = eTokens
-	$expect (equal "unknown subcommand \"foo\"" err)
+	$expect (equal "Unknown subcommand \"foo\"." err)
