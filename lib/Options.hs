@@ -149,12 +149,9 @@ import           Control.Monad.Error (ErrorT, runErrorT, throwError)
 import           Control.Monad.IO.Class
 import           Control.Monad.Reader
 import           Control.Monad.State
-import qualified Data.ByteString.Char8 as Char8
-import           Data.Char (chr, isAlpha, isAlphaNum, isLower)
 import           Data.List (foldl', intercalate)
 import qualified Data.Set as Set
 import qualified Data.Text as Text
-import qualified Data.Text.Encoding as Text
 import qualified System.Environment
 import           System.Exit (exitFailure, exitSuccess)
 import           System.IO
@@ -168,6 +165,7 @@ import           Options.Help
 import           Options.OptionTypes
 import           Options.Tokenize
 import           Options.Types
+import           Options.Util
 
 -- | Options are defined together in a single data type, which will be an
 -- instance of 'Options'.
@@ -396,35 +394,9 @@ parseOptionTok key p def = do
 			-- shouldn't happen
 			Left err -> ParserM (\_ -> Left ("Internal error while parsing default options: " ++ err))
 			Right a -> return a
-		Just (flagName, val) -> case p (decodeString val) of
+		Just (flagName, val) -> case p val of
 			Left err -> ParserM (\_ -> Left ("Value for flag " ++ flagName ++ " is invalid: " ++ err))
 			Right a -> return a
-
-decodeString :: String -> String
-#if __GLASGOW_HASKELL__ >= 702 || defined(CABAL_OS_WINDOWS)
--- NOTE: GHC 7.2 uses the range 0xEF80 through 0xEFFF to store its encoded
--- bytes. This range is also valid Unicode, so there's no way to discern
--- between a non-Unicode value, and just weird Unicode.
---
--- When decoding strings, FilePath assumes that codepoints in this range are
--- actually bytes because file paths are likely to contain arbitrary bytes
--- on POSIX systems.
---
--- Here, we make the opposite decision, because an option is more likely to
--- be intended as text.
-decodeString = id
-#else
-decodeString s = Text.unpack (Text.decodeUtf8With step (Char8.pack s)) where
-	step _ = fmap (\w -> chr (fromIntegral w + 0xDC00))
-#endif
-
-validFieldName :: String -> Bool
-validFieldName = valid where
-	valid s = case s of
-		[] -> False
-		c : cs -> validFirst c && all validGeneral cs
-	validFirst c = isLower c || c == '_'
-	validGeneral c = isAlphaNum c || c == '_' || c == '\''
 
 checkFieldName :: String -> OptionsM ()
 checkFieldName name = do
@@ -449,7 +421,7 @@ checkValidFlags fieldName shorts longs = do
 	-- Check that 'shorts' contains only non-repeated letters and digits
 	when (hasDuplicates shorts)
 		(OptionsM (throwError ("Option " ++ show fieldName ++ " has duplicate short flags.")))
-	case filter (not . isAlphaNum) shorts of
+	case filter (not . validShortFlag) shorts of
 		[] -> return ()
 		invalid -> OptionsM (throwError ("Option " ++ show fieldName ++ " has invalid short flags " ++ show invalid ++ "."))
 	
@@ -475,16 +447,6 @@ checkUniqueFlags fieldName shorts longs = do
 	let dups = dupShort ++ dupLong
 	unless (null dups)
 		(OptionsM (throwError ("Option " ++ show fieldName ++ " uses already-defined flags " ++ show dups ++ ".")))
-
-validLongFlag :: String -> Bool
-validLongFlag = valid where
-	valid s = case s of
-		[] -> False
-		c : cs -> isAlpha c && all validGeneral cs
-	validGeneral c = isAlphaNum c || c == '-' || c == '_'
-
-hasDuplicates :: Ord a => [a] -> Bool
-hasDuplicates xs = Set.size (Set.fromList xs) /= length xs
 
 -- | Include options defined elsewhere into the current options definition.
 --

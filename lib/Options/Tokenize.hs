@@ -14,6 +14,7 @@ import           Data.Functor.Identity
 import qualified Data.Map
 
 import           Options.Types
+import           Options.Util
 
 data TokState = TokState
 	{ stArgv :: [String]
@@ -58,17 +59,17 @@ loop = do
 	st <- get
 	case ms of
 		Nothing -> return ()
-		Just s -> (>> loop) $ case s of
+		Just s -> (>> loop) $ case decodeString s of
 			'-':'-':[] -> put (st { stArgv = [], stArgs = stArgs st ++ stArgv st })
 			'-':'-':opt -> parseLong opt
 			'-':optChar:optValue -> parseShort optChar optValue
 			'-':[] -> addArg s
-			_ -> case (stSubcommands st, stSubCmd st) of
+			decoded -> case (stSubcommands st, stSubCmd st) of
 				([], _) -> addArg s
 				(_, Just _) -> addArg s
-				(_, Nothing) -> case lookup s (stSubcommands st) of
-					Nothing -> throwError ("Unknown subcommand " ++ show s ++ ".")
-					Just subOptions -> mergeSubcommand s subOptions
+				(_, Nothing) -> case lookup decoded (stSubcommands st) of
+					Nothing -> throwError ("Unknown subcommand " ++ show decoded ++ ".")
+					Just subOptions -> mergeSubcommand decoded subOptions
 
 nextItem :: Tok (Maybe String)
 nextItem = do

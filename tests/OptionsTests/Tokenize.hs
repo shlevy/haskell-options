@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 
@@ -30,6 +31,7 @@ test_Tokenize = suite "tokenize"
 	, test_EndFlags
 	, test_Subcommand
 	, test_SubcommandUnknown
+	, test_Unicode
 	]
 
 commandDefs :: OptionDefinitions ()
@@ -43,7 +45,7 @@ commandDefs = OptionDefinitions
 
 subcommandDefs :: OptionDefinitions ()
 subcommandDefs = OptionDefinitions
-	[ OptionInfo "test.a" ['a'] ["long-a"] "default" False  "" Nothing
+	[ OptionInfo "test.a" ['a'] ["long-a"] "default" False "" Nothing
 	, OptionInfo "test.b" ['b'] ["long-b"] "default" False "" Nothing
 	, OptionInfo "test.x" ['x'] ["long-x"] "default" True "" Nothing
 	, OptionInfo "test.y" ['y'] ["long-y"] "default" True "" Nothing
@@ -58,6 +60,12 @@ subcommandDefs = OptionDefinitions
 		, OptionInfo "sub.e" ['e'] ["long-e"] "default" True "" Nothing
 		])
 	]
+
+unicodeDefs :: OptionDefinitions ()
+unicodeDefs = OptionDefinitions
+	[ OptionInfo "test.a" ['\12354'] ["long-\12354"] "default" False "" Nothing
+	]
+	[]
 
 test_Empty :: Suite
 test_Empty = assertions "empty" $ do
@@ -284,3 +292,32 @@ test_SubcommandUnknown = assertions "subcommand-unknown" $ do
 	
 	let Left err = eTokens
 	$expect (equal "Unknown subcommand \"foo\"." err)
+
+test_Unicode :: Suite
+test_Unicode = assertions "unicode" $ do
+#if __GLASGOW_HASKELL__ >= 702 || defined(CABAL_OS_WINDOWS)
+	let shortArgs = ["-\12354", "foo", "bar"]
+	let longArgs = ["--long-\12354=foo", "bar"]
+#else
+	let shortArgs = ["-\227\129\130", "foo", "bar"]
+	let longArgs = ["--long-\227\129\130=foo", "bar"]
+#endif
+	do
+		let (subcmd, eTokens) = tokenize unicodeDefs shortArgs
+		$expect (equal Nothing subcmd)
+		case eTokens of
+			Left err -> error err
+			Right _ -> return ()
+		$assert (right eTokens)
+		
+		let Right (TokensFor tokens args) = eTokens
+		$expect (equal [("test.a", ("-\12354", "foo"))] tokens)
+		$expect (equal ["bar"] args)
+	do
+		let (subcmd, eTokens) = tokenize unicodeDefs longArgs
+		$expect (equal Nothing subcmd)
+		$assert (right eTokens)
+		
+		let Right (TokensFor tokens args) = eTokens
+		$expect (equal [("test.a", ("--long-\12354", "foo"))] tokens)
+		$expect (equal ["bar"] args)
