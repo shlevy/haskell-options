@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 -- |
@@ -98,7 +99,6 @@ module Options
 	
 	, optionTypeString
 	, optionTypeText
-	, optionTypeRawString
 	, optionTypeFilePath
 	
 	, optionTypeInt
@@ -149,15 +149,18 @@ import           Control.Monad.Error (ErrorT, runErrorT, throwError)
 import           Control.Monad.IO.Class
 import           Control.Monad.Reader
 import           Control.Monad.State
-import           Data.Char (isAlpha, isAlphaNum, isLower)
+import qualified Data.ByteString.Char8 as Char8
+import           Data.Char (chr, isAlpha, isAlphaNum, isLower)
 import           Data.List (foldl', intercalate)
 import qualified Data.Set as Set
 import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
 import qualified System.Environment
 import           System.Exit (exitFailure, exitSuccess)
 import           System.IO
 
-import qualified Filesystem.Path.CurrentOS as Path
+import qualified Filesystem.Path as Path
+import qualified Filesystem.Path.Rules as Path
 import           Language.Haskell.TH
 import           Language.Haskell.TH.Syntax (mkNameG_tc)
 
@@ -390,10 +393,28 @@ parseOptionTok key p def = do
 	TokensFor tokens _ <- ParserM (\t -> Right t)
 	let val = case lookup key tokens of
 		Nothing -> def
-		Just x -> x
+		Just x -> decodeString x
 	case p val of
 		Left err -> ParserM (\_ -> Left err)
 		Right x -> return x
+
+decodeString :: String -> String
+#if __GLASGOW_HASKELL__ >= 702 || defined(CABAL_OS_WINDOWS)
+-- NOTE: GHC 7.2 uses the range 0xEF80 through 0xEFFF to store its encoded
+-- bytes. This range is also valid Unicode, so there's no way to discern
+-- between a non-Unicode value, and just weird Unicode.
+--
+-- When decoding strings, FilePath assumes that codepoints in this range are
+-- actually bytes because file paths are likely to contain arbitrary bytes
+-- on POSIX systems.
+--
+-- Here, we make the opposite decision, because an option is more likely to
+-- be intended as text.
+decodeString = id
+#else
+decodeString s = Text.unpack (Text.decodeUtf8With step (Char8.pack s)) where
+	step _ = fmap (\w -> chr (fromIntegral w + 0xDC00))
+#endif
 
 validFieldName :: String -> Bool
 validFieldName = valid where
@@ -636,7 +657,11 @@ pathOption :: String -- ^ Field name
            -> OptionsM ()
 pathOption name flag def desc = option name (\o -> o
 	{ optionLongFlags = [flag]
-	, optionDefault = Path.encodeString def
+#if defined(CABAL_OS_WINDOWS)
+	, optionDefault = Path.encodeString Path.windows def
+#else
+	, optionDefault = Path.encodeString Path.posix_ghc704 def
+#endif
 	, optionType = optionTypeFilePath
 	, optionDescription = desc
 	})

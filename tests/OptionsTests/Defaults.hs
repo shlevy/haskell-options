@@ -51,11 +51,6 @@ $(defineOptions "AllOptions" $ do
 		, optionType = optionTypeText
 		, optionDefault = "abc"
 		})
-	option "t_RawString" (\o -> o
-		{ optionLongFlags = ["t_RawString"]
-		, optionType = optionTypeRawString
-		, optionDefault = "abc"
-		})
 	option "t_FilePath" (\o -> o
 		{ optionLongFlags = ["t_FilePath"]
 		, optionType = optionTypeFilePath
@@ -176,7 +171,6 @@ test_Defaults = assertions "defaults" $ do
 	$expect (equal (t_Bool def) True)
 	$expect (equal (t_String def) ("abc" :: String))
 	$expect (equal (t_Text def) ("abc" :: Text))
-	$expect (equal (t_RawString def) ("abc" :: String))
 	$expect (equal (t_FilePath def) ("a/b/c" :: FilePath))
 	$expect (equal (t_Int def) (123 :: Int))
 	$expect (equal (t_Int8 def) (123 :: Int8))

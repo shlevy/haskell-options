@@ -6,19 +6,14 @@
 -- License: MIT
 module Options.OptionTypes where
 
-import qualified Control.Exception as Exc
-import qualified Data.ByteString.Char8 as Char8
-import           Data.Char (chr, ord)
 import           Data.Int
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.Text as Text
-import           Data.Text.Encoding (decodeUtf8)
-import           Data.Text.Encoding.Error (UnicodeException)
 import           Data.Word
-import           System.IO.Unsafe (unsafePerformIO)
 
-import qualified Filesystem.Path.CurrentOS as Path
+import qualified Filesystem.Path as Path
+import qualified Filesystem.Path.Rules as Path
 import           Language.Haskell.TH
 
 data Option a = Option
@@ -113,48 +108,7 @@ parseBool s = case s of
 -- first, if needed. The value may contain non-Unicode bytes, in which case
 -- they will be stored using GHC 7.4's encoding for mixed-use strings.
 optionTypeString :: OptionType String
-optionTypeString = OptionType (ConT ''String) False parseString [| parseString |]
-
-parseString :: String -> Either String String
-parseString = Right . decodeString
-
-decodeString :: String -> String
-#if defined(CABAL_OS_WINDOWS)
-decodeString = id
-#else
-#if __GLASGOW_HASKELL__ >= 704
-decodeString = id
-#elif __GLASGOW_HASKELL__ >= 702
--- NOTE: GHC 7.2 uses the range 0xEF80 through 0xEFFF to store its encoded
--- bytes. This range is also valid Unicode, so there's no way to discern
--- between a non-Unicode value, and just weird Unicode.
---
--- When decoding strings, FilePath assumes that codepoints in this range are
--- actually bytes because file paths are likely to contain arbitrary bytes
--- on POSIX systems.
---
--- Here, we make the opposite decision, because an option is more likely to
--- be intended as text.
-decodeString = id
-#else
-decodeString s = case maybeDecodeUtf8 s of
-	Just s' -> s'
-	Nothing -> map (\c -> if ord c >= 0x80
-		then chr (ord c + 0xDC00)
-		else c) s
-
-maybeDecodeUtf8 :: String -> Maybe String
-maybeDecodeUtf8 = fmap Text.unpack . (excToMaybe . decode) where
-	excToMaybe :: a -> Maybe a
-	excToMaybe x = unsafePerformIO $ Exc.catch
-		(fmap Just (Exc.evaluate x))
-		unicodeError
-	unicodeError :: UnicodeException -> IO (Maybe a)
-	unicodeError _ = return Nothing
-	
-	decode = decodeUtf8 . Char8.pack
-#endif
-#endif
+optionTypeString = OptionType (ConT ''String) False Right [| Right |]
 
 -- | Store an option value as a @'Text.Text'@. The value is decoded to Unicode
 -- first, if needed. If the value cannot be decoded, the stored value may have
@@ -164,19 +118,20 @@ optionTypeText :: OptionType Text.Text
 optionTypeText = OptionType (ConT ''Text.Text) False parseText [| parseText |]
 
 parseText :: String -> Either String Text.Text
-parseText s = Right (Text.pack (decodeString s))
-
--- | Store an option value as a @'String'@. The value is stored as it was
--- received, with no decoding or other transformations applied.
-optionTypeRawString :: OptionType String
-optionTypeRawString = OptionType (ConT ''String) False Right [| Right |]
+parseText = Right . Text.pack
 
 -- | Store an option value as a @'Path.FilePath'@.
 optionTypeFilePath :: OptionType Path.FilePath
 optionTypeFilePath = OptionType (ConT ''Path.FilePath) False parsePath [| parsePath |]
 
 parsePath :: String -> Either String Path.FilePath
-parsePath s = Right (Path.decodeString s)
+#if defined(CABAL_OS_WINDOWS)
+parsePath s = Right (Path.decodeString Path.windows s)
+#elif __GLASGOW_HASKELL__ == 702
+parsePath s = Right (Path.decodeString Path.posix_ghc702 s)
+#else
+parsePath s = Right (Path.decodeString Path.posix_ghc704 s)
+#endif
 
 parseInteger :: String -> String -> Either String Integer
 parseInteger label s = parsed where

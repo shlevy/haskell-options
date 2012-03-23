@@ -9,14 +9,14 @@ module OptionsTests.OptionTypes
 	( test_OptionTypes
 	) where
 
-import           Control.Monad (unless)
 import           Data.Int
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.Text as Text
 import           Data.Word
 
-import qualified Filesystem.Path.CurrentOS as Path
+import qualified Filesystem.Path.Rules as Path
+import qualified Filesystem.Path.CurrentOS ()
 import           Test.Chell
 
 import           Options.OptionTypes
@@ -26,7 +26,6 @@ test_OptionTypes = suite "option-types"
 	[ test_Bool
 	, test_String
 	, test_Text
-	, test_RawString
 	, test_FilePath
 	, test_Int
 	, test_Int8
@@ -63,45 +62,15 @@ test_Bool = assertions "bool" $ do
 	$expect (parseValid optionTypeBool "false" False)
 	$expect (parseInvalid optionTypeBool "" "invalid boolean value: \"\"")
 
-nativeAscii, nativeUnicode, nativeBytes, nativeBytesU, nativeBytesT :: String
-#if defined(CABAL_OS_WINDOWS)
-nativeAscii = "hello"
-nativeUnicode = "\12371\12435\12395\12385\12399"
-nativeBytes = ""
-nativeBytesU = ""
-nativeBytesT = ""
-#else
-#if __GLASGOW_HASKELL__ >= 704
-nativeAscii = "hello"
-nativeUnicode = "\12371\12435\12395\12385\12399"
-nativeBytes = "a-\56507-c.txt"
-nativeBytesU = "a-\56507-c.txt"
-nativeBytesT = "a-\65533-c.txt"
-#elif __GLASGOW_HASKELL__ >= 702
-nativeAscii = "hello"
-nativeUnicode = "\12371\12435\12395\12385\12399"
-nativeBytes = "a-\61371-c.txt"
-nativeBytesU = "a-\61371-c.txt"
-nativeBytesT = "a-\61371-c.txt"
-#else
-nativeAscii = "hello"
-nativeUnicode = "\227\129\147\227\130\147\227\129\171\227\129\161\227\129\175"
-nativeBytes = "a-\187-c.txt"
-nativeBytesU = "a-\56507-c.txt"
-nativeBytesT = "a-\65533-c.txt"
-#endif
-#endif
-
 test_String :: Suite
 test_String = assertions "string" $ do
 	let valid = parseValid optionTypeString
 	let invalid = parseInvalid optionTypeString
 	
 	$expect (valid "" "")
-	$expect (valid nativeAscii "hello")
-	$expect (valid nativeUnicode "\12371\12435\12395\12385\12399")
-	unless (null nativeBytes) $ do
-		$expect (valid nativeBytes nativeBytesU)
+	$expect (valid "a" "a")
+	$expect (valid "\12354" "\12354")
+	$expect (valid "\56507" "\56507")
 
 test_Text :: Suite
 test_Text = assertions "text" $ do
@@ -110,33 +79,25 @@ test_Text = assertions "text" $ do
 	let invalid = parseInvalid optionTypeText
 	
 	$expect (valid "" (p ""))
-	$expect (valid nativeAscii (p "hello"))
-	$expect (valid nativeUnicode (p "\12371\12435\12395\12385\12399"))
-	unless (null nativeBytes) $ do
-		$expect (valid nativeBytes (p nativeBytesT))
-
-test_RawString :: Suite
-test_RawString = assertions "raw-string" $ do
-	let valid = parseValid optionTypeRawString
-	let invalid = parseInvalid optionTypeRawString
-	
-	$expect (valid "" "")
-	$expect (valid nativeAscii nativeAscii)
-	$expect (valid nativeUnicode nativeUnicode)
-	unless (null nativeBytes) $ do
-		$expect (valid nativeBytes nativeBytes)
+	$expect (valid "a" (p "a"))
+	$expect (valid "\12354" (p "\12354"))
+	$expect (valid "\56507" (p "\65533"))
 
 test_FilePath :: Suite
 test_FilePath = assertions "filepath" $ do
-	let p = Path.decodeString
+	let p = Path.decodeString Path.posix_ghc704
 	let valid = parseValid optionTypeFilePath
 	let invalid = parseInvalid optionTypeFilePath
 	
 	$expect (valid "" (p ""))
-	$expect (valid nativeAscii (p nativeAscii))
-	$expect (valid nativeUnicode (p nativeUnicode))
-	unless (null nativeBytes) $ do
-		$expect (valid nativeBytes (p nativeBytes))
+	$expect (valid "a" (p "a"))
+	$expect (valid "a-\12403-c.txt" (p "a-\12403-c.txt"))
+#if !defined(CABAL_OS_WINDOWS) && __GLASGOW_HASKELL__ == 702
+	$expect (valid "a-\56507-c.txt" (p "a-\61371-c.txt"))
+#else
+	$expect (valid "a-\56507-c.txt" (p "a-\56507-c.txt"))
+	$expect (valid "a-\61371-c.txt" (p "a-\61371-c.txt"))
+#endif
 
 test_Int :: Suite
 test_Int = assertions "int" $ do

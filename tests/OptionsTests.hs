@@ -12,6 +12,7 @@ import           OptionsTests.Defaults (test_Defaults)
 import           OptionsTests.Help (test_Help)
 import           OptionsTests.OptionTypes (test_OptionTypes)
 import           OptionsTests.Tokenize (test_Tokenize)
+import           OptionsTests.StringParsing (test_StringParsing)
 
 tests :: [Suite]
 tests =
@@ -19,6 +20,7 @@ tests =
 	, test_Help
 	, test_OptionTypes
 	, test_Tokenize
+	, test_StringParsing
 	]
 
 main :: IO ()

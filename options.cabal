@@ -67,6 +67,7 @@ extra-source-files:
   tests/OptionsTests/Help.hs
   tests/OptionsTests/OptionTypes.hs
   tests/OptionsTests/Tokenize.hs
+  tests/OptionsTests/StringParsing.hs
 
 source-repository head
   type: bazaar
