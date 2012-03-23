@@ -71,6 +71,7 @@ test_String = assertions "string" $ do
 	$expect (valid "a" "a")
 	$expect (valid "\12354" "\12354")
 	$expect (valid "\56507" "\56507")
+	$expect (valid "\61371" "\61371")
 
 test_Text :: Suite
 test_Text = assertions "text" $ do
@@ -82,6 +83,7 @@ test_Text = assertions "text" $ do
 	$expect (valid "a" (p "a"))
 	$expect (valid "\12354" (p "\12354"))
 	$expect (valid "\56507" (p "\65533"))
+	$expect (valid "\61371" (p "\61371"))
 
 test_FilePath :: Suite
 test_FilePath = assertions "filepath" $ do
@@ -92,8 +94,10 @@ test_FilePath = assertions "filepath" $ do
 	$expect (valid "" (p ""))
 	$expect (valid "a" (p "a"))
 	$expect (valid "a-\12403-c.txt" (p "a-\12403-c.txt"))
-#if !defined(CABAL_OS_WINDOWS) && __GLASGOW_HASKELL__ == 702
-	$expect (valid "a-\56507-c.txt" (p "a-\61371-c.txt"))
+#if defined(CABAL_OS_WINDOWS)
+	$expect (valid "a-\61371-c.txt" (p "a-\61371-c.txt"))
+#elif __GLASGOW_HASKELL__ == 702
+	$expect (valid "a-\61371-c.txt" (p "a-\56507-c.txt"))
 #else
 	$expect (valid "a-\56507-c.txt" (p "a-\56507-c.txt"))
 	$expect (valid "a-\61371-c.txt" (p "a-\61371-c.txt"))
