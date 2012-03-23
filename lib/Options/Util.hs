@@ -44,8 +44,8 @@ validLongFlag :: String -> Bool
 validLongFlag = valid where
 	valid s = case s of
 		[] -> False
-		c : cs -> isAlpha c && all validGeneral cs
-	validGeneral c = isAlphaNum c || c == '-' || c == '_'
+		_ -> all validChar s
+	validChar c = isAlphaNum c || c == '-' || c == '_'
 
 hasDuplicates :: Ord a => [a] -> Bool
 hasDuplicates xs = Set.size (Set.fromList xs) /= length xs

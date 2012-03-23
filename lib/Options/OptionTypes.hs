@@ -22,24 +22,23 @@ data Option a = Option
 	-- | Short flags are a single character. When entered by a user,
 	-- they are preceded by a dash and possibly other short flags.
 	--
-	-- Short flags may not be @\'-\'@, non-printable, or whitespace.
+	-- Short flags must be a letter or a number.
 	--
-	-- Example: An option with @optionShortFlags = [\'n\']@ may be set using:
+	-- Example: An option with @optionShortFlags = [\'p\']@ may be set using:
 	--
-	-- >$ ./app -n John
-	-- >$ ./app -nJohn
+	-- >$ ./app -p 443
+	-- >$ ./app -p443
 	  optionShortFlags :: [Char]
 	
 	-- | Long flags are multiple characters. When entered by a user, they
 	-- are preceded by two dashes.
 	--
-	-- Long flags may not contain @\'=\'@, non-printable characters, or
-	-- whitespace characters.
+	-- Long flags may contain letters, numbers, @\'-\'@, and @\'_\'@.
 	--
-	-- Example: An option with @optionLongFlags = [\"name\"]@ may be set using:
+	-- Example: An option with @optionLongFlags = [\"port\"]@ may be set using:
 	--
-	-- >$ ./app --name John
-	-- >$ ./app --name=John
+	-- >$ ./app --port 443
+	-- >$ ./app --port=443
 	, optionLongFlags :: [String]
 	
 	-- | Options may have a default value. This will be parsed as if the

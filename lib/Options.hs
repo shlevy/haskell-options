@@ -322,10 +322,10 @@ putOptionDecl name qtype infoExp parseExp = OptionsM (modify (\st -> st
 -- details.
 --
 -- @
---'option' \"optFoo\" (\\o -> o
---    { 'optionLongFlags' = [\"names\"]
---    , 'optionDefault' = \"Alice;Bob;Charles\"
---    , 'optionType' = 'optionTypeList' \';\' 'optionTypeString'
+--'option' \"optPort\" (\\o -> o
+--    { 'optionLongFlags' = [\"port\"]
+--    , 'optionDefault' = \"80\"
+--    , 'optionType' = 'optionTypeWord16'
 --    }
 -- @
 option :: String -- ^ Field name
