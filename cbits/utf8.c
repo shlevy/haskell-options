@@ -3,12 +3,13 @@
 
 #include <stdio.h>
 
-// Decode a UTF8-encoded string to UCS4 using the Höhrmann decoder. Any
-// invalid bytes are stored using GHC 7.4's encoding for mixed-use strings.
-//
-// 'len' is the length of both 'utf8' and 'out'.
-//
-// Returns the number of items written to *out.
+/* Decode a UTF8-encoded string to UCS4 using the Höhrmann decoder. Any
+ * invalid bytes are stored using GHC 7.4's encoding for mixed-use strings.
+ *
+ * 'len' is the length of both 'utf8' and 'out'.
+ *
+ * Returns the number of items written to *out.
+ */
 int hsoptions_decode_string(uint8_t *utf8, uint32_t *out, int len)
 {
 	uint32_t state = UTF8_ACCEPT;
