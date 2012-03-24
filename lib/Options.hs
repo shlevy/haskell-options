@@ -768,6 +768,9 @@ parsedHelp = parsedHelp_
 -- over error handling, or who want to perform additional validation on the
 -- options value.
 --
+-- The argument list must be in the same encoding as the result of
+-- 'System.Environment.getArgs'.
+--
 -- Use @'parsedOptions'@, @'parsedArguments'@, @'parsedError'@, and
 -- @'parsedHelp'@ to inspect the result of @'parseOptions'@.
 --
@@ -863,6 +866,9 @@ findSubcmd subcommands name tokens = subcmd where
 -- | Attempt to convert a list of command-line arguments into a subcommand
 -- action. This can be used by application developers who want finer control
 -- over error handling, or who want subcommands that run in an unusual monad.
+--
+-- The argument list must be in the same encoding as the result of
+-- 'System.Environment.getArgs'.
 --
 -- Use @'parsedSubcommand'@, @'parsedError'@, and @'parsedHelp'@ to inspect the
 -- result of @'parseSubcommand'@.
