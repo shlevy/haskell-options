@@ -1,15 +1,17 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE ForeignFunctionInterface #-}
 
 -- |
 -- Module: Options.Util
 -- License: MIT
 module Options.Util where
 
+import           Data.ByteString.Unsafe (unsafeUseAsCStringLen)
 import qualified Data.ByteString.Char8 as Char8
 import           Data.Char (chr, isAlphaNum, isLetter, isUpper)
 import qualified Data.Set as Set
-import qualified Data.Text as Text
-import qualified Data.Text.Encoding as Text
+import           Foreign
+import           Foreign.C
 
 stringToGhc704 :: String -> String
 #if __GLASGOW_HASKELL__ >= 702 || defined(CABAL_OS_WINDOWS)
@@ -29,8 +31,14 @@ stringToGhc704 = decodeUtf8 . Char8.pack
 #endif
 
 decodeUtf8 :: Char8.ByteString -> String
-decodeUtf8 bytes = Text.unpack (Text.decodeUtf8With step bytes) where
-	step _ = fmap (\w -> chr (fromIntegral w + 0xDC00))
+decodeUtf8 bytes = map (chr . fromIntegral) words where
+	words = unsafePerformIO (unsafeUseAsCStringLen bytes io)
+	io (bytesPtr, len) = allocaArray len $ \wordsPtr -> do
+		nWords <- c_decodeString (castPtr bytesPtr) wordsPtr (fromIntegral len)
+		peekArray (fromIntegral nWords) wordsPtr
+
+foreign import ccall unsafe "hsoptions_decode_string"
+	c_decodeString :: Ptr Word8 -> Ptr Word32 -> CInt -> IO CInt
 
 validFieldName :: String -> Bool
 validFieldName = valid where

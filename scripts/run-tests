@@ -17,4 +17,4 @@ pushd tests
 $CABAL_DEV -s ../cabal-dev install || exit 1
 popd
 
-cabal-dev/bin/options_tests
+cabal-dev/bin/options_tests $@

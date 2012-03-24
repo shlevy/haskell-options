@@ -57,6 +57,9 @@ description:
   >  --quiet                     Whether to be quiet.
 
 extra-source-files:
+  cbits/hoehrmann_utf8.c
+  cbits/utf8.c
+  --
   scripts/common.bash
   scripts/run-coverage
   scripts/run-tests
@@ -82,6 +85,8 @@ source-repository this
 library
   ghc-options: -Wall -O2
   hs-source-dirs: lib
+
+  c-sources: cbits/utf8.c
 
   if os(windows)
       cpp-options: -DCABAL_OS_WINDOWS

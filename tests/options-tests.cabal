@@ -12,6 +12,8 @@ executable options_tests
   ghc-options: -Wall
   hs-source-dirs: ../lib,.
 
+  c-sources: ../cbits/utf8.c
+
   if flag(coverage)
     ghc-options: -fhpc
 
