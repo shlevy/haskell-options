@@ -145,10 +145,11 @@ module Options
 	, parseSubcommand
 	) where
 
+import           Control.Monad (forM, unless, when)
 import           Control.Monad.Error (ErrorT, runErrorT, throwError)
 import           Control.Monad.IO.Class
-import           Control.Monad.Reader
-import           Control.Monad.State
+import           Control.Monad.Reader (Reader, runReader, ask)
+import           Control.Monad.State (StateT, execStateT, get, modify)
 import           Data.List (foldl', intercalate)
 import qualified Data.Set as Set
 import qualified Data.Text as Text
@@ -273,7 +274,7 @@ getOptionsDefs fields = do
 getOptionsParse :: Name -> [(Name, Type, Q Exp, Q Exp)] -> Q Exp
 getOptionsParse dataName fields = do
 	let genBind (_, _, _, qParseExp) = do
-		varName <- newName "val"
+		varName <- newName "_val"
 		parseExp <- qParseExp
 		return (varName, BindS (VarP varName) parseExp)
 	

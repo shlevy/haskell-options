@@ -9,16 +9,19 @@ module OptionsTests.Util
 	( test_Util
 	) where
 
+#if defined(OPTIONS_ENCODING_UTF8)
 import           Data.Bits
 import qualified Data.ByteString.Char8 as Char8
 import           Data.Char (chr, ord)
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 
-import           Test.Chell
 import           Test.Chell.QuickCheck
 import           Test.QuickCheck (Property, forAll)
 import           Test.QuickCheck.Gen
+#endif
+
+import           Test.Chell
 
 import           Options.Util
 

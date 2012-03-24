@@ -6,10 +6,11 @@
 -- License: MIT
 module Options.Util where
 
-import           Data.Char (chr, isAlphaNum, isLetter, isUpper)
+import           Data.Char (isAlphaNum, isLetter, isUpper)
 import qualified Data.Set as Set
 
 #if defined(OPTIONS_ENCODING_UTF8)
+import           Data.Char (chr)
 import           Data.ByteString.Unsafe (unsafeUseAsCStringLen)
 import qualified Data.ByteString.Char8 as Char8
 import           Foreign
@@ -21,8 +22,8 @@ stringToGhc704 :: String -> String
 stringToGhc704 = decodeUtf8 . Char8.pack
 
 decodeUtf8 :: Char8.ByteString -> String
-decodeUtf8 bytes = map (chr . fromIntegral) words where
-	words = unsafePerformIO (unsafeUseAsCStringLen bytes io)
+decodeUtf8 bytes = map (chr . fromIntegral) word32s where
+	word32s = unsafePerformIO (unsafeUseAsCStringLen bytes io)
 	io (bytesPtr, len) = allocaArray len $ \wordsPtr -> do
 		nWords <- c_decodeString (castPtr bytesPtr) wordsPtr (fromIntegral len)
 		peekArray (fromIntegral nWords) wordsPtr
