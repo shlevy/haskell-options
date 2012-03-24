@@ -84,6 +84,7 @@ source-repository this
 
 library
   ghc-options: -Wall -O2
+  cc-options: -Wall -O2
   hs-source-dirs: lib
 
   if os(windows)

@@ -10,6 +10,7 @@ flag coverage
 executable options_tests
   main-is: OptionsTests.hs
   ghc-options: -Wall
+  cc-options: -Wall
   hs-source-dirs: ../lib,.
 
   if flag(coverage)
