@@ -59,7 +59,7 @@ loop = do
 	st <- get
 	case ms of
 		Nothing -> return ()
-		Just s -> (>> loop) $ case decodeString s of
+		Just s -> (>> loop) $ case stringToGhc704 s of
 			'-':'-':[] -> put (st { stArgv = [], stArgs = stArgs st ++ stArgv st })
 			'-':'-':opt -> parseLong opt
 			'-':optChar:optValue -> parseShort optChar optValue

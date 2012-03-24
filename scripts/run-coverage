@@ -22,8 +22,9 @@ EXCLUDES="\
 --exclude=OptionsTests.Defaults \
 --exclude=OptionsTests.Help \
 --exclude=OptionsTests.OptionTypes \
---exclude=OptionsTests.Tokenize \
 --exclude=OptionsTests.StringParsing \
+--exclude=OptionsTests.Tokenize \
+--exclude=OptionsTests.Util \
 --exclude=Main"
 
 hpc markup --srcdir=lib/ --srcdir=tests/ options_tests.tix --destdir=hpc-markup $EXCLUDES > /dev/null
