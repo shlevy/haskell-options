@@ -5,7 +5,7 @@
 -- Module: Options
 -- License: MIT
 --
--- The @Options@ package lets library and application developers easily work
+-- The @options@ package lets library and application developers easily work
 -- with command-line options.
 --
 -- The following example is a full program that can accept two options,
