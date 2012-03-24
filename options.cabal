@@ -91,7 +91,7 @@ library
 
   if !os(windows) && impl(ghc < 7.2)
       cpp-options: -DOPTIONS_ENCODING_UTF8
-      c-sources: ../cbits/utf8.c
+      c-sources: cbits/utf8.c
 
   build-depends:
       base >= 4.0 && < 5.0
