@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 
@@ -23,29 +24,14 @@ import           Options.Util
 
 test_Util :: Suite
 test_Util = suite "util"
-	[ property "decodeUtf8" prop_DecodeUtf8
-	, test_ValidFieldName
+	[ test_ValidFieldName
 	, test_ValidShortFlag
 	, test_ValidLongFlag
 	, test_HasDuplicates
+#if defined(OPTIONS_ENCODING_UTF8)
+	, property "decodeUtf8" prop_DecodeUtf8
+#endif
 	]
-
-prop_DecodeUtf8 :: Property
-prop_DecodeUtf8 = forAll example prop where
-	example = do
-		chunks <- listOf genChunk
-		let utf = concat [x | (x, _) <- chunks]
-		let chars = concat [x | (_, x) <- chunks]
-		return (Char8.pack utf, chars)
-	genChunk = do
-		unichr <- genUnichar
-		let utf = Char8.unpack (Text.encodeUtf8 (Text.singleton unichr))
-		nBytes <- choose (1, length utf)
-		let truncUtf = take nBytes utf
-		return $ if nBytes == length utf
-			then (utf, [unichr])
-			else (truncUtf, map (\c -> chr (ord c + 0xDC00)) truncUtf)
-	prop (bytes, expected) = decodeUtf8 bytes == expected
 
 test_ValidFieldName :: Suite
 test_ValidFieldName = assertions "validFieldName" $ do
@@ -90,6 +76,24 @@ test_HasDuplicates = assertions "hasDuplicates" $ do
 	$expect (not (hasDuplicates ['a', 'b']))
 	$expect (hasDuplicates ['a', 'b', 'a'])
 
+#if defined(OPTIONS_ENCODING_UTF8)
+prop_DecodeUtf8 :: Property
+prop_DecodeUtf8 = forAll example prop where
+	example = do
+		chunks <- listOf genChunk
+		let utf = concat [x | (x, _) <- chunks]
+		let chars = concat [x | (_, x) <- chunks]
+		return (Char8.pack utf, chars)
+	genChunk = do
+		unichr <- genUnichar
+		let utf = Char8.unpack (Text.encodeUtf8 (Text.singleton unichr))
+		nBytes <- choose (1, length utf)
+		let truncUtf = take nBytes utf
+		return $ if nBytes == length utf
+			then (utf, [unichr])
+			else (truncUtf, map (\c -> chr (ord c + 0xDC00)) truncUtf)
+	prop (bytes, expected) = decodeUtf8 bytes == expected
+
 genUnichar :: Gen Char
 genUnichar = chr `fmap` excluding reserved (oneof planes) where
 	excluding :: [a -> Bool] -> Gen a -> Gen a
@@ -131,3 +135,4 @@ genUnichar = chr `fmap` excluding reserved (oneof planes) where
 	               ]
 	plane14 = choose (0xE0000, 0xE0FFF)
 	planes = [ascii, plane0, plane1, plane2, plane14]
+#endif

@@ -6,29 +6,19 @@
 -- License: MIT
 module Options.Util where
 
-import           Data.ByteString.Unsafe (unsafeUseAsCStringLen)
-import qualified Data.ByteString.Char8 as Char8
 import           Data.Char (chr, isAlphaNum, isLetter, isUpper)
 import qualified Data.Set as Set
+
+#if defined(OPTIONS_ENCODING_UTF8)
+import           Data.ByteString.Unsafe (unsafeUseAsCStringLen)
+import qualified Data.ByteString.Char8 as Char8
 import           Foreign
 import           Foreign.C
+#endif
 
 stringToGhc704 :: String -> String
-#if __GLASGOW_HASKELL__ >= 702 || defined(CABAL_OS_WINDOWS)
--- NOTE: GHC 7.2 uses the range 0xEF80 through 0xEFFF to store its encoded
--- bytes. This range is also valid Unicode, so there's no way to discern
--- between a non-Unicode value, and just weird Unicode.
---
--- When decoding strings, FilePath assumes that codepoints in this range are
--- actually bytes because file paths are likely to contain arbitrary bytes
--- on POSIX systems.
---
--- Here, we make the opposite decision, because an option is more likely to
--- be intended as text.
-stringToGhc704 = id
-#else
+#if defined(OPTIONS_ENCODING_UTF8)
 stringToGhc704 = decodeUtf8 . Char8.pack
-#endif
 
 decodeUtf8 :: Char8.ByteString -> String
 decodeUtf8 bytes = map (chr . fromIntegral) words where
@@ -39,6 +29,9 @@ decodeUtf8 bytes = map (chr . fromIntegral) words where
 
 foreign import ccall unsafe "hsoptions_decode_string"
 	c_decodeString :: Ptr Word8 -> Ptr Word32 -> CInt -> IO CInt
+#else
+stringToGhc704 = id
+#endif
 
 validFieldName :: String -> Bool
 validFieldName = valid where

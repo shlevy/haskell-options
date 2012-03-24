@@ -86,10 +86,12 @@ library
   ghc-options: -Wall -O2
   hs-source-dirs: lib
 
-  c-sources: cbits/utf8.c
-
   if os(windows)
       cpp-options: -DCABAL_OS_WINDOWS
+
+  if !os(windows) && impl(ghc < 7.2)
+      cpp-options: -DOPTIONS_ENCODING_UTF8
+      c-sources: ../cbits/utf8.c
 
   build-depends:
       base >= 4.0 && < 5.0

@@ -295,12 +295,12 @@ test_SubcommandUnknown = assertions "subcommand-unknown" $ do
 
 test_Unicode :: Suite
 test_Unicode = assertions "unicode" $ do
-#if __GLASGOW_HASKELL__ >= 702 || defined(CABAL_OS_WINDOWS)
-	let shortArgs = ["-\12354", "foo", "bar"]
-	let longArgs = ["--long-\12354=foo", "bar"]
-#else
+#if defined(OPTIONS_ENCODING_UTF8)
 	let shortArgs = ["-\227\129\130", "foo", "bar"]
 	let longArgs = ["--long-\227\129\130=foo", "bar"]
+#else
+	let shortArgs = ["-\12354", "foo", "bar"]
+	let longArgs = ["--long-\12354=foo", "bar"]
 #endif
 	do
 		let (subcmd, eTokens) = tokenize unicodeDefs shortArgs

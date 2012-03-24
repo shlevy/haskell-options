@@ -73,7 +73,7 @@ $(defineOptions "StringOptions" $ do
 	)
 
 windowsBuild :: Bool
-#ifdef CABAL_OS_WINDOWS
+#if defined(CABAL_OS_WINDOWS)
 windowsBuild = True
 #else
 windowsBuild = False
@@ -113,10 +113,10 @@ test_Ascii = assertions "ascii" $ do
 
 test_UnicodeValid :: Suite
 test_UnicodeValid = assertions "unicode-valid" $ do
-#if __GLASGOW_HASKELL__ >= 702 || defined(CABAL_OS_WINDOWS)
-	let parsed = parseOptions ["--string=\12354", "--text=\12354", "--path=\12354/b/c"]
-#else
+#if defined(OPTIONS_ENCODING_UTF8)
 	let parsed = parseOptions ["--string=\227\129\130", "--text=\227\129\130", "--path=\227\129\130/b/c"]
+#else
+	let parsed = parseOptions ["--string=\12354", "--text=\12354", "--path=\12354/b/c"]
 #endif
 	let Just opts = parsedOptions parsed
 	
