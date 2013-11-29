@@ -8,21 +8,21 @@ module Main
 
 import           Test.Chell (Suite, defaultMain)
 
-import           OptionsTests.Defaults (test_Defaults)
-import           OptionsTests.Help (test_Help)
-import           OptionsTests.OptionTypes (test_OptionTypes)
-import           OptionsTests.StringParsing (test_StringParsing)
-import           OptionsTests.Tokenize (test_Tokenize)
-import           OptionsTests.Util (test_Util)
+import           OptionsTests.Defaults (suite_Defaults)
+import           OptionsTests.Help (suite_Help)
+import           OptionsTests.OptionTypes (suite_OptionTypes)
+import           OptionsTests.StringParsing (suite_StringParsing)
+import           OptionsTests.Tokenize (suite_Tokenize)
+import           OptionsTests.Util (suite_Util)
 
 tests :: [Suite]
 tests =
-	[ test_Defaults
-	, test_Help
-	, test_OptionTypes
-	, test_StringParsing
-	, test_Tokenize
-	, test_Util
+	[ suite_Defaults
+	, suite_Help
+	, suite_OptionTypes
+	, suite_StringParsing
+	, suite_Tokenize
+	, suite_Util
 	]
 
 main :: IO ()

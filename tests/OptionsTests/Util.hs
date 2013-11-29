@@ -6,7 +6,7 @@
 --
 -- See license.txt for details
 module OptionsTests.Util
-	( test_Util
+	( suite_Util
 	) where
 
 #if defined(OPTIONS_ENCODING_UTF8)
@@ -25,18 +25,17 @@ import           Test.Chell
 
 import           Options.Util
 
-test_Util :: Suite
-test_Util = suite "util"
-	[ test_ValidFieldName
-	, test_ValidShortFlag
-	, test_ValidLongFlag
-	, test_HasDuplicates
+suite_Util :: Suite
+suite_Util = suite "util"
+	test_ValidFieldName
+	test_ValidShortFlag
+	test_ValidLongFlag
+	test_HasDuplicates
 #if defined(OPTIONS_ENCODING_UTF8)
-	, property "decodeUtf8" prop_DecodeUtf8
+	property "decodeUtf8" prop_DecodeUtf8
 #endif
-	]
 
-test_ValidFieldName :: Suite
+test_ValidFieldName :: Test
 test_ValidFieldName = assertions "validFieldName" $ do
 	$expect (validFieldName "a")
 	$expect (validFieldName "abc")
@@ -48,7 +47,7 @@ test_ValidFieldName = assertions "validFieldName" $ do
 	$expect (not (validFieldName "a b"))
 	$expect (not (validFieldName "Ab"))
 
-test_ValidShortFlag :: Suite
+test_ValidShortFlag :: Test
 test_ValidShortFlag = assertions "validShortFlag" $ do
 	$expect (validShortFlag 'a')
 	$expect (validShortFlag 'A')
@@ -57,7 +56,7 @@ test_ValidShortFlag = assertions "validShortFlag" $ do
 	$expect (not (validShortFlag ' '))
 	$expect (not (validShortFlag '-'))
 
-test_ValidLongFlag :: Suite
+test_ValidLongFlag :: Test
 test_ValidLongFlag = assertions "validLongFlag" $ do
 	$expect (validLongFlag "a")
 	$expect (validLongFlag "A")
@@ -73,7 +72,7 @@ test_ValidLongFlag = assertions "validLongFlag" $ do
 	$expect (not (validLongFlag "-"))
 	$expect (not (validLongFlag "--"))
 
-test_HasDuplicates :: Suite
+test_HasDuplicates :: Test
 test_HasDuplicates = assertions "hasDuplicates" $ do
 	$expect (not (hasDuplicates ([] :: [Char])))
 	$expect (not (hasDuplicates ['a', 'b']))

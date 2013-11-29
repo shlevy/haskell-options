@@ -6,7 +6,7 @@
 --
 -- See license.txt for details
 module OptionsTests.StringParsing
-	( test_StringParsing
+	( suite_StringParsing
 	) where
 
 import           Prelude hiding (FilePath)
@@ -79,15 +79,14 @@ windowsBuild = True
 windowsBuild = False
 #endif
 
-test_StringParsing :: Suite
-test_StringParsing = suite "string-parsing"
-	[ test_Defaults
-	, test_Ascii
-	, test_UnicodeValid
-	, skipIf windowsBuild test_UnicodeInvalid
-	]
+suite_StringParsing :: Suite
+suite_StringParsing = suite "string-parsing"
+	test_Defaults
+	test_Ascii
+	test_UnicodeValid
+	(skipIf windowsBuild test_UnicodeInvalid)
 
-test_Defaults :: Suite
+test_Defaults :: Test
 test_Defaults = assertions "defaults" $ do
 	let opts = defaultOptions
 	
@@ -102,7 +101,7 @@ test_Defaults = assertions "defaults" $ do
 	unless windowsBuild $ do
 		$expect (equal (optPath_defB opts) (Path.decodeString Path.posix_ghc704 "\56507/b/c"))
 
-test_Ascii :: Suite
+test_Ascii :: Test
 test_Ascii = assertions "ascii" $ do
 	let parsed = parseOptions ["--string=a", "--text=a", "--path=a"]
 	let Just opts = parsedOptions parsed
@@ -111,7 +110,7 @@ test_Ascii = assertions "ascii" $ do
 	$expect (equal (optText opts) "a")
 	$expect (equal (optPath opts) (Path.decodeString Path.posix_ghc704 "a"))
 
-test_UnicodeValid :: Suite
+test_UnicodeValid :: Test
 test_UnicodeValid = assertions "unicode-valid" $ do
 #if defined(OPTIONS_ENCODING_UTF8)
 	let parsed = parseOptions ["--string=\227\129\130", "--text=\227\129\130", "--path=\227\129\130/b/c"]
@@ -124,7 +123,7 @@ test_UnicodeValid = assertions "unicode-valid" $ do
 	$expect (equal (optText opts) "\12354")
 	$expect (equal (optPath opts) (Path.decodeString Path.posix_ghc704 "\12354/b/c"))
 
-test_UnicodeInvalid :: Suite
+test_UnicodeInvalid :: Test
 test_UnicodeInvalid = assertions "unicode-invalid" $ do
 #if __GLASGOW_HASKELL__ >= 704
 	let parsed = parseOptions ["--string=\56507", "--text=\56507", "--path=\12354/\56507"]

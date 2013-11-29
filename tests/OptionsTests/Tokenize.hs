@@ -6,7 +6,7 @@
 --
 -- See license.txt for details
 module OptionsTests.Tokenize
-	( test_Tokenize
+	( suite_Tokenize
 	) where
 
 import           Test.Chell
@@ -14,25 +14,24 @@ import           Test.Chell
 import           Options.Types
 import           Options.Tokenize
 
-test_Tokenize :: Suite
-test_Tokenize = suite "tokenize"
-	[ test_Empty
-	, test_NoFlag
-	, test_ShortFlag
-	, test_ShortFlagUnknown
-	, test_ShortFlagMissing
-	, test_ShortFlagUnary
-	, test_ShortFlagDuplicate
-	, test_LongFlag
-	, test_LongFlagUnknown
-	, test_LongFlagMissing
-	, test_LongFlagUnary
-	, test_LongFlagDuplicate
-	, test_EndFlags
-	, test_Subcommand
-	, test_SubcommandUnknown
-	, test_Unicode
-	]
+suite_Tokenize :: Suite
+suite_Tokenize = suite "tokenize"
+	test_Empty
+	test_NoFlag
+	test_ShortFlag
+	test_ShortFlagUnknown
+	test_ShortFlagMissing
+	test_ShortFlagUnary
+	test_ShortFlagDuplicate
+	test_LongFlag
+	test_LongFlagUnknown
+	test_LongFlagMissing
+	test_LongFlagUnary
+	test_LongFlagDuplicate
+	test_EndFlags
+	test_Subcommand
+	test_SubcommandUnknown
+	test_Unicode
 
 commandDefs :: OptionDefinitions ()
 commandDefs = OptionDefinitions
@@ -67,7 +66,7 @@ unicodeDefs = OptionDefinitions
 	]
 	[]
 
-test_Empty :: Suite
+test_Empty :: Test
 test_Empty = assertions "empty" $ do
 	let (subcmd, eTokens) = tokenize commandDefs []
 	$expect (equal Nothing subcmd)
@@ -77,7 +76,7 @@ test_Empty = assertions "empty" $ do
 	$expect (equal [] tokens)
 	$expect (equal [] args)
 
-test_NoFlag :: Suite
+test_NoFlag :: Test
 test_NoFlag = assertions "no-flag" $ do
 	let (subcmd, eTokens) = tokenize commandDefs ["-", "foo", "bar"]
 	$expect (equal Nothing subcmd)
@@ -87,7 +86,7 @@ test_NoFlag = assertions "no-flag" $ do
 	$expect (equal [] tokens)
 	$expect (equal ["-", "foo", "bar"] args)
 
-test_ShortFlag :: Suite
+test_ShortFlag :: Test
 test_ShortFlag = assertions "short-flag" $ do
 	do
 		let (subcmd, eTokens) = tokenize commandDefs ["-a", "foo", "bar"]
@@ -106,7 +105,7 @@ test_ShortFlag = assertions "short-flag" $ do
 		$expect (equal [("test.a", ("-a", "foo"))] tokens)
 		$expect (equal ["bar"] args)
 
-test_ShortFlagUnknown :: Suite
+test_ShortFlagUnknown :: Test
 test_ShortFlagUnknown = assertions "short-flag-unknown" $ do
 	let (subcmd, eTokens) = tokenize commandDefs ["-c", "foo", "bar"]
 	$expect (equal Nothing subcmd)
@@ -115,7 +114,7 @@ test_ShortFlagUnknown = assertions "short-flag-unknown" $ do
 	let Left err = eTokens
 	$expect (equal "Unknown flag -c" err)
 
-test_ShortFlagMissing :: Suite
+test_ShortFlagMissing :: Test
 test_ShortFlagMissing = assertions "short-flag-missing" $ do
 	let (subcmd, eTokens) = tokenize commandDefs ["-a"]
 	$expect (equal Nothing subcmd)
@@ -124,7 +123,7 @@ test_ShortFlagMissing = assertions "short-flag-missing" $ do
 	let Left err = eTokens
 	$expect (equal "The flag -a requires an argument." err)
 
-test_ShortFlagUnary :: Suite
+test_ShortFlagUnary :: Test
 test_ShortFlagUnary = assertions "short-flag-unary" $ do
 	do
 		let (subcmd, eTokens) = tokenize commandDefs ["-x", "foo", "bar"]
@@ -143,7 +142,7 @@ test_ShortFlagUnary = assertions "short-flag-unary" $ do
 		$expect (equal [("test.x", ("-x", "true")), ("test.y", ("-y", "true"))] tokens)
 		$expect (equal ["foo", "bar"] args)
 
-test_ShortFlagDuplicate :: Suite
+test_ShortFlagDuplicate :: Test
 test_ShortFlagDuplicate = assertions "short-flag-duplicate" $ do
 	do
 		let (subcmd, eTokens) = tokenize commandDefs ["-x", "-x"]
@@ -167,7 +166,7 @@ test_ShortFlagDuplicate = assertions "short-flag-duplicate" $ do
 		let Left err = eTokens
 		$expect (equal "Multiple values for flag -a were provided." err)
 
-test_LongFlag :: Suite
+test_LongFlag :: Test
 test_LongFlag = assertions "long-flag" $ do
 	do
 		let (subcmd, eTokens) = tokenize commandDefs ["--long-a", "foo", "bar"]
@@ -186,7 +185,7 @@ test_LongFlag = assertions "long-flag" $ do
 		$expect (equal [("test.a", ("--long-a", "foo"))] tokens)
 		$expect (equal ["bar"] args)
 
-test_LongFlagUnknown :: Suite
+test_LongFlagUnknown :: Test
 test_LongFlagUnknown = assertions "long-flag-unknown" $ do
 	do
 		let (subcmd, eTokens) = tokenize commandDefs ["--long-c", "foo", "bar"]
@@ -203,7 +202,7 @@ test_LongFlagUnknown = assertions "long-flag-unknown" $ do
 		let Left err = eTokens
 		$expect (equal "Unknown flag --long-c" err)
 
-test_LongFlagMissing :: Suite
+test_LongFlagMissing :: Test
 test_LongFlagMissing = assertions "long-flag-missing" $ do
 	let (subcmd, eTokens) = tokenize commandDefs ["--long-a"]
 	$expect (equal Nothing subcmd)
@@ -212,7 +211,7 @@ test_LongFlagMissing = assertions "long-flag-missing" $ do
 	let Left err = eTokens
 	$expect (equal "The flag --long-a requires an argument." err)
 
-test_LongFlagUnary :: Suite
+test_LongFlagUnary :: Test
 test_LongFlagUnary = assertions "long-flag-unary" $ do
 	do
 		let (subcmd, eTokens) = tokenize commandDefs ["--long-x", "foo", "bar"]
@@ -231,7 +230,7 @@ test_LongFlagUnary = assertions "long-flag-unary" $ do
 		$expect (equal [("test.x", ("--long-x", "foo"))] tokens)
 		$expect (equal ["bar"] args)
 
-test_LongFlagDuplicate :: Suite
+test_LongFlagDuplicate :: Test
 test_LongFlagDuplicate = assertions "long-flag-duplicate" $ do
 	do
 		let (subcmd, eTokens) = tokenize commandDefs ["-x", "--long-x"]
@@ -255,7 +254,7 @@ test_LongFlagDuplicate = assertions "long-flag-duplicate" $ do
 		let Left err = eTokens
 		$expect (equal "Multiple values for flag --long-a were provided." err)
 
-test_EndFlags :: Suite
+test_EndFlags :: Test
 test_EndFlags = assertions "end-flags" $ do
 	let (subcmd, eTokens) = tokenize commandDefs ["foo", "--", "-a", "bar"]
 	$expect (equal Nothing subcmd)
@@ -265,7 +264,7 @@ test_EndFlags = assertions "end-flags" $ do
 	$expect (equal [] tokens)
 	$expect (equal ["foo", "-a", "bar"] args)
 
-test_Subcommand :: Suite
+test_Subcommand :: Test
 test_Subcommand = assertions "subcommand" $ do
 	do
 		let (subcmd, eTokens) = tokenize subcommandDefs ["-x", "sub1", "-d", "foo", "--long-e", "bar"]
@@ -284,7 +283,7 @@ test_Subcommand = assertions "subcommand" $ do
 		$expect (equal [("test.x", ("-x", "true")), ("sub.d", ("-d", "true")), ("sub.e", ("--long-e", "true"))] tokens)
 		$expect (equal ["foo", "bar"] args)
 
-test_SubcommandUnknown:: Suite
+test_SubcommandUnknown:: Test
 test_SubcommandUnknown = assertions "subcommand-unknown" $ do
 	let (subcmd, eTokens) = tokenize subcommandDefs ["foo"]
 	$expect (equal Nothing subcmd)
@@ -293,7 +292,7 @@ test_SubcommandUnknown = assertions "subcommand-unknown" $ do
 	let Left err = eTokens
 	$expect (equal "Unknown subcommand \"foo\"." err)
 
-test_Unicode :: Suite
+test_Unicode :: Test
 test_Unicode = assertions "unicode" $ do
 #if defined(OPTIONS_ENCODING_UTF8)
 	let shortArgs = ["-\227\129\130", "foo", "bar"]

@@ -6,7 +6,7 @@
 --
 -- See license.txt for details
 module OptionsTests.OptionTypes
-	( test_OptionTypes
+	( suite_OptionTypes
 	) where
 
 import           Data.Int
@@ -21,31 +21,30 @@ import           Test.Chell
 
 import           Options.OptionTypes
 
-test_OptionTypes :: Suite
-test_OptionTypes = suite "option-types"
-	[ test_Bool
-	, test_String
-	, test_Text
-	, test_FilePath
-	, test_Int
-	, test_Int8
-	, test_Int16
-	, test_Int32
-	, test_Int64
-	, test_Word
-	, test_Word8
-	, test_Word16
-	, test_Word32
-	, test_Word64
-	, test_Integer
-	, test_Float
-	, test_Double
-	, test_Maybe
-	, test_List
-	, test_Set
-	, test_Map
-	, test_Enum
-	]
+suite_OptionTypes :: Suite
+suite_OptionTypes = suite "option-types"
+	test_Bool
+	test_String
+	test_Text
+	test_FilePath
+	test_Int
+	test_Int8
+	test_Int16
+	test_Int32
+	test_Int64
+	test_Word
+	test_Word8
+	test_Word16
+	test_Word32
+	test_Word64
+	test_Integer
+	test_Float
+	test_Double
+	test_Maybe
+	test_List
+	test_Set
+	test_Map
+	test_Enum
 
 parseValid :: (Show a, Eq a) => OptionType a -> String -> a -> Assertion
 parseValid t s expected = equal (optionParser t s) (Right expected)
@@ -56,13 +55,13 @@ parseInvalid t s err = equal (optionParser t s) (Left err)
 optionParser :: OptionType a -> String -> Either String a
 optionParser (OptionType _ _ p _) = p
 
-test_Bool :: Suite
+test_Bool :: Test
 test_Bool = assertions "bool" $ do
 	$expect (parseValid optionTypeBool "true" True)
 	$expect (parseValid optionTypeBool "false" False)
 	$expect (parseInvalid optionTypeBool "" "\"\" is not in {\"true\", \"false\"}.")
 
-test_String :: Suite
+test_String :: Test
 test_String = assertions "string" $ do
 	let valid = parseValid optionTypeString
 	let invalid = parseInvalid optionTypeString
@@ -73,7 +72,7 @@ test_String = assertions "string" $ do
 	$expect (valid "\56507" "\56507")
 	$expect (valid "\61371" "\61371")
 
-test_Text :: Suite
+test_Text :: Test
 test_Text = assertions "text" $ do
 	let p = Text.pack
 	let valid = parseValid optionTypeText
@@ -85,7 +84,7 @@ test_Text = assertions "text" $ do
 	$expect (valid "\56507" (p "\65533"))
 	$expect (valid "\61371" (p "\61371"))
 
-test_FilePath :: Suite
+test_FilePath :: Test
 test_FilePath = assertions "filepath" $ do
 	let p = Path.decodeString Path.posix_ghc704
 	let valid = parseValid optionTypeFilePath
@@ -103,7 +102,7 @@ test_FilePath = assertions "filepath" $ do
 	$expect (valid "a-\61371-c.txt" (p "a-\61371-c.txt"))
 #endif
 
-test_Int :: Suite
+test_Int :: Test
 test_Int = assertions "int" $ do
 	let valid = parseValid optionTypeInt
 	let invalid = parseInvalid optionTypeInt
@@ -121,7 +120,7 @@ test_Int = assertions "int" $ do
 	$expect (valid (show (maxBound :: Int)) maxBound)
 	$expect (invalid pastMax (pastMax ++ errBounds))
 
-test_Int8 :: Suite
+test_Int8 :: Test
 test_Int8 = assertions "int8" $ do
 	let valid = parseValid optionTypeInt8
 	let invalid = parseInvalid optionTypeInt8
@@ -137,7 +136,7 @@ test_Int8 = assertions "int8" $ do
 	$expect (valid (show (maxBound :: Int8)) maxBound)
 	$expect (invalid pastMax "128 is not within bounds [-128:127] of type int8.")
 
-test_Int16 :: Suite
+test_Int16 :: Test
 test_Int16 = assertions "int16" $ do
 	let valid = parseValid optionTypeInt16
 	let invalid = parseInvalid optionTypeInt16
@@ -153,7 +152,7 @@ test_Int16 = assertions "int16" $ do
 	$expect (valid (show (maxBound :: Int16)) maxBound)
 	$expect (invalid pastMax "32768 is not within bounds [-32768:32767] of type int16.")
 
-test_Int32 :: Suite
+test_Int32 :: Test
 test_Int32 = assertions "int32" $ do
 	let valid = parseValid optionTypeInt32
 	let invalid = parseInvalid optionTypeInt32
@@ -169,7 +168,7 @@ test_Int32 = assertions "int32" $ do
 	$expect (valid (show (maxBound :: Int32)) maxBound)
 	$expect (invalid pastMax "2147483648 is not within bounds [-2147483648:2147483647] of type int32.")
 
-test_Int64 :: Suite
+test_Int64 :: Test
 test_Int64 = assertions "int64" $ do
 	let valid = parseValid optionTypeInt64
 	let invalid = parseInvalid optionTypeInt64
@@ -185,7 +184,7 @@ test_Int64 = assertions "int64" $ do
 	$expect (valid (show (maxBound :: Int64)) maxBound)
 	$expect (invalid pastMax "9223372036854775808 is not within bounds [-9223372036854775808:9223372036854775807] of type int64.")
 
-test_Word :: Suite
+test_Word :: Test
 test_Word = assertions "word" $ do
 	let valid = parseValid optionTypeWord
 	let invalid = parseInvalid optionTypeWord
@@ -201,7 +200,7 @@ test_Word = assertions "word" $ do
 	$expect (valid (show (maxBound :: Word)) maxBound)
 	$expect (invalid pastMax (pastMax ++ errBounds))
 
-test_Word8 :: Suite
+test_Word8 :: Test
 test_Word8 = assertions "word8" $ do
 	let valid = parseValid optionTypeWord8
 	let invalid = parseInvalid optionTypeWord8
@@ -215,7 +214,7 @@ test_Word8 = assertions "word8" $ do
 	$expect (valid (show (maxBound :: Word8)) maxBound)
 	$expect (invalid pastMax "256 is not within bounds [0:255] of type word8.")
 
-test_Word16 :: Suite
+test_Word16 :: Test
 test_Word16 = assertions "word16" $ do
 	let valid = parseValid optionTypeWord16
 	let invalid = parseInvalid optionTypeWord16
@@ -229,7 +228,7 @@ test_Word16 = assertions "word16" $ do
 	$expect (valid (show (maxBound :: Word16)) maxBound)
 	$expect (invalid pastMax "65536 is not within bounds [0:65535] of type word16.")
 
-test_Word32 :: Suite
+test_Word32 :: Test
 test_Word32 = assertions "word32" $ do
 	let valid = parseValid optionTypeWord32
 	let invalid = parseInvalid optionTypeWord32
@@ -243,7 +242,7 @@ test_Word32 = assertions "word32" $ do
 	$expect (valid (show (maxBound :: Word32)) maxBound)
 	$expect (invalid pastMax "4294967296 is not within bounds [0:4294967295] of type word32.")
 
-test_Word64 :: Suite
+test_Word64 :: Test
 test_Word64 = assertions "word64" $ do
 	let valid = parseValid optionTypeWord64
 	let invalid = parseInvalid optionTypeWord64
@@ -257,7 +256,7 @@ test_Word64 = assertions "word64" $ do
 	$expect (valid (show (maxBound :: Word64)) maxBound)
 	$expect (invalid pastMax "18446744073709551616 is not within bounds [0:18446744073709551615] of type word64.")
 
-test_Integer :: Suite
+test_Integer :: Test
 test_Integer = assertions "integer" $ do
 	let valid = parseValid optionTypeInteger
 	let invalid = parseInvalid optionTypeInteger
@@ -268,7 +267,7 @@ test_Integer = assertions "integer" $ do
 	$expect (valid "1" (1 :: Integer))
 	$expect (invalid "a" "\"a\" is not an integer.")
 
-test_Float :: Suite
+test_Float :: Test
 test_Float = assertions "float" $ do
 	let valid = parseValid optionTypeFloat
 	let invalid = parseInvalid optionTypeFloat
@@ -280,7 +279,7 @@ test_Float = assertions "float" $ do
 	$expect (valid "3e5" (3e5 :: Float))
 	$expect (invalid "a" "\"a\" is not a number.")
 
-test_Double :: Suite
+test_Double :: Test
 test_Double = assertions "double" $ do
 	let valid = parseValid optionTypeDouble
 	let invalid = parseInvalid optionTypeDouble
@@ -292,7 +291,7 @@ test_Double = assertions "double" $ do
 	$expect (valid "3e5" (3e5 :: Double))
 	$expect (invalid "a" "\"a\" is not a number.")
 
-test_Maybe :: Suite
+test_Maybe :: Test
 test_Maybe = assertions "maybe" $ do
 	let t = optionTypeMaybe optionTypeInt
 	let valid = parseValid t
@@ -302,7 +301,7 @@ test_Maybe = assertions "maybe" $ do
 	$expect (valid "1" (Just 1))
 	$expect (invalid "a" "\"a\" is not an integer.")
 
-test_List :: Suite
+test_List :: Test
 test_List = assertions "list" $ do
 	let t = optionTypeList ',' optionTypeInt
 	let valid = parseValid t
@@ -314,7 +313,7 @@ test_List = assertions "list" $ do
 	$expect (valid "1,1,2,3" [1, 1, 2, 3])
 	$expect (invalid "1,a,3" "\"a\" is not an integer.")
 
-test_Set :: Suite
+test_Set :: Test
 test_Set = assertions "set" $ do
 	let t = optionTypeSet ',' optionTypeInt
 	let valid = parseValid t
@@ -326,7 +325,7 @@ test_Set = assertions "set" $ do
 	$expect (valid "1,1,2,3" (Set.fromList [1, 2, 3]))
 	$expect (invalid "1,a,3" "\"a\" is not an integer.")
 
-test_Map :: Suite
+test_Map :: Test
 test_Map = assertions "map" $ do
 	let t = optionTypeMap ',' '=' optionTypeInt optionTypeInt
 	let valid = parseValid t
@@ -344,7 +343,7 @@ test_Map = assertions "map" $ do
 data TestEnum = Enum1 | Enum2 | Enum3
 	deriving (Enum, Eq, Show)
 
-test_Enum :: Suite
+test_Enum :: Test
 test_Enum = assertions "enum" $ do
 	let t = optionTypeEnum ''TestEnum
 		[ ("e1", Enum1)

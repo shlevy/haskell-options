@@ -5,7 +5,7 @@
 --
 -- See license.txt for details
 module OptionsTests.Defaults
-	( test_Defaults
+	( suite_Defaults
 	) where
 
 import           Prelude hiding (FilePath)
@@ -151,7 +151,11 @@ $(defineOptions "AllOptions" $ do
 		})
 	)
 
-test_Defaults :: Suite
+suite_Defaults :: Suite
+suite_Defaults = suite "defaults"
+	test_Defaults
+
+test_Defaults :: Test
 test_Defaults = assertions "defaults" $ do
 	let def = defaultOptions :: AllOptions
 	

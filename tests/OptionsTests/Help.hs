@@ -5,7 +5,7 @@
 --
 -- See license.txt for details
 module OptionsTests.Help
-	( test_Help
+	( suite_Help
 	) where
 
 import           Test.Chell
@@ -13,28 +13,26 @@ import           Test.Chell
 import           Options.Types
 import           Options.Help
 
-test_Help :: Suite
-test_Help = suite "help"
-	[ test_AddHelpFlags
-	, test_CheckHelpFlag
-	, test_ShowHelpSummary
-	, test_ShowHelpSummary_Subcommand
-	, test_ShowHelpAll
-	, test_ShowHelpAll_Subcommand
-	, test_ShowHelpGroup
-	, test_ShowHelpGroup_Subcommand
-	, test_ShowHelpGroup_SubcommandInvalid
-	]
+suite_Help :: Suite
+suite_Help = suite "help"
+	suite_AddHelpFlags
+	test_CheckHelpFlag
+	test_ShowHelpSummary
+	test_ShowHelpSummary_Subcommand
+	test_ShowHelpAll
+	test_ShowHelpAll_Subcommand
+	test_ShowHelpGroup
+	test_ShowHelpGroup_Subcommand
+	test_ShowHelpGroup_SubcommandInvalid
 
-test_AddHelpFlags :: Suite
-test_AddHelpFlags = suite "addHelpFlags"
-	[ test_AddHelpFlags_None
-	, test_AddHelpFlags_Short
-	, test_AddHelpFlags_Long
-	, test_AddHelpFlags_Both
-	, test_AddHelpFlags_NoAll
-	, test_AddHelpFlags_Subcommand
-	]
+suite_AddHelpFlags :: Suite
+suite_AddHelpFlags = suite "addHelpFlags"
+	test_AddHelpFlags_None
+	test_AddHelpFlags_Short
+	test_AddHelpFlags_Long
+	test_AddHelpFlags_Both
+	test_AddHelpFlags_NoAll
+	test_AddHelpFlags_Subcommand
 
 groupInfoHelp :: Maybe GroupInfo
 groupInfoHelp = Just (GroupInfo
@@ -65,7 +63,7 @@ infoHelpAll = OptionInfo
 	, optionInfoGroup = groupInfoHelp
 	}
 
-test_AddHelpFlags_None :: Suite
+test_AddHelpFlags_None :: Test
 test_AddHelpFlags_None = assertions "none" $ do
 	let commandDefs = OptionDefinitions
 		[ OptionInfo "test.help" ['h'] ["help"] "default" False "" Nothing
@@ -80,7 +78,7 @@ test_AddHelpFlags_None = assertions "none" $ do
 		])
 	$expect (equal subcmds [])
 
-test_AddHelpFlags_Short :: Suite
+test_AddHelpFlags_Short :: Test
 test_AddHelpFlags_Short = assertions "short" $ do
 	let commandDefs = OptionDefinitions
 		[ OptionInfo "test.help" [] ["help"] "default" False "" Nothing
@@ -96,7 +94,7 @@ test_AddHelpFlags_Short = assertions "short" $ do
 		])
 	$expect (equal subcmds [])
 
-test_AddHelpFlags_Long :: Suite
+test_AddHelpFlags_Long :: Test
 test_AddHelpFlags_Long = assertions "long" $ do
 	let commandDefs = OptionDefinitions
 		[ OptionInfo "test.help" ['h'] [] "default" False "" Nothing
@@ -112,7 +110,7 @@ test_AddHelpFlags_Long = assertions "long" $ do
 		])
 	$expect (equal subcmds [])
 
-test_AddHelpFlags_Both :: Suite
+test_AddHelpFlags_Both :: Test
 test_AddHelpFlags_Both = assertions "both" $ do
 	let commandDefs = OptionDefinitions [] []
 	let helpAdded = addHelpFlags commandDefs
@@ -124,7 +122,7 @@ test_AddHelpFlags_Both = assertions "both" $ do
 		])
 	$expect (equal subcmds [])
 
-test_AddHelpFlags_NoAll :: Suite
+test_AddHelpFlags_NoAll :: Test
 test_AddHelpFlags_NoAll = assertions "no-all" $ do
 	let commandDefs = OptionDefinitions
 		[ OptionInfo "test.help" ['h'] ["help", "help-all"] "default" False "" Nothing
@@ -138,7 +136,7 @@ test_AddHelpFlags_NoAll = assertions "no-all" $ do
 		])
 	$expect (equal subcmds [])
 
-test_AddHelpFlags_Subcommand :: Suite
+test_AddHelpFlags_Subcommand :: Test
 test_AddHelpFlags_Subcommand = assertions "subcommand" $ do
 	let cmd1_a = OptionInfo "test.cmd1.a" ['a'] [] "" False "" (Just GroupInfo
 		{ groupInfoName = "foo"
@@ -176,7 +174,7 @@ test_AddHelpFlags_Subcommand = assertions "subcommand" $ do
 		])
 	$expect (equal subcmds [("cmd1", [helpFoo, cmd1_a, cmd1_b])])
 
-test_CheckHelpFlag :: Suite
+test_CheckHelpFlag :: Test
 test_CheckHelpFlag = assertions "checkHelpFlag" $ do
 	let checkFlag keys = equal (checkHelpFlag (TokensFor [(k, ("-h", "true")) | k <- keys] []))
 	
@@ -210,7 +208,7 @@ variedOptions = addHelpFlags $ OptionDefinitions
 		])
 	]
 
-test_ShowHelpSummary :: Suite
+test_ShowHelpSummary :: Test
 test_ShowHelpSummary = assertions "showHelpSummary" $ do
 	let expected = "\
 	\Help Options:\n\
@@ -231,7 +229,7 @@ test_ShowHelpSummary = assertions "showHelpSummary" $ do
 	\\n"
 	$expect (equalLines expected (helpFor HelpSummary variedOptions Nothing))
 
-test_ShowHelpSummary_Subcommand :: Suite
+test_ShowHelpSummary_Subcommand :: Test
 test_ShowHelpSummary_Subcommand = assertions "showHelpSummary-subcommand" $ do
 	let expected = "\
 	\Help Options:\n\
@@ -251,7 +249,7 @@ test_ShowHelpSummary_Subcommand = assertions "showHelpSummary-subcommand" $ do
 	\\n"
 	$expect (equalLines expected (helpFor HelpSummary variedOptions (Just "cmd1")))
 
-test_ShowHelpAll :: Suite
+test_ShowHelpAll :: Test
 test_ShowHelpAll = assertions "showHelpAll" $ do
 	let expected = "\
 	\Help Options:\n\
@@ -278,7 +276,7 @@ test_ShowHelpAll = assertions "showHelpAll" $ do
 	\\n"
 	$expect (equalLines expected (helpFor HelpAll variedOptions Nothing))
 
-test_ShowHelpAll_Subcommand :: Suite
+test_ShowHelpAll_Subcommand :: Test
 test_ShowHelpAll_Subcommand = assertions "showHelpAll-subcommand" $ do
 	let expected = "\
 	\Help Options:\n\
@@ -301,7 +299,7 @@ test_ShowHelpAll_Subcommand = assertions "showHelpAll-subcommand" $ do
 	\\n"
 	$expect (equalLines expected (helpFor HelpAll variedOptions (Just "cmd1")))
 
-test_ShowHelpGroup :: Suite
+test_ShowHelpGroup :: Test
 test_ShowHelpGroup = assertions "showHelpGroup" $ do
 	let expected = "\
 	\Grouped options:\n\
@@ -309,7 +307,7 @@ test_ShowHelpGroup = assertions "showHelpGroup" $ do
 	\\n"
 	$expect (equalLines expected (helpFor (HelpGroup "group") variedOptions Nothing))
 
-test_ShowHelpGroup_Subcommand :: Suite
+test_ShowHelpGroup_Subcommand :: Test
 test_ShowHelpGroup_Subcommand = assertions "showHelpGroup-subcommand" $ do
 	let expected = "\
 	\Grouped options:\n\
@@ -318,7 +316,7 @@ test_ShowHelpGroup_Subcommand = assertions "showHelpGroup-subcommand" $ do
 	\\n"
 	$expect (equalLines expected (helpFor (HelpGroup "group") variedOptions (Just "cmd2")))
 
-test_ShowHelpGroup_SubcommandInvalid :: Suite
+test_ShowHelpGroup_SubcommandInvalid :: Test
 test_ShowHelpGroup_SubcommandInvalid = assertions "showHelpGroup-subcommand-invalid" $ do
 	let expected = "\
 	\Grouped options:\n\
