@@ -76,7 +76,12 @@ data Group = Group
 -- | An option's type determines how the option will be parsed, and which
 -- Haskell type the parsed value will be stored as. There are many types
 -- available, covering most basic types and a few more advanced types.
-data OptionType a = OptionType Type Bool (String -> Either String a) (Q Exp)
+data OptionType val = OptionType
+	{ optionTypeTemplateType :: Type
+	, optionTypeUnary :: Bool
+	, optionTypeParse :: String -> Either String val
+	, optionTypeTemplateParse :: Q Exp
+	}
 
 -- | Store an option as a @'Bool'@. The option's value must be either
 -- @\"true\"@ or @\"false\"@.

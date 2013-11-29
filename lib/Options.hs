@@ -364,14 +364,12 @@ option fieldName f = do
 		Nothing -> [| Nothing |]
 		Just n -> [| Just (GroupInfo n optGroupDesc optGroupHelpDesc) |]
 	
-	let OptionType thType unary parseOptType parseExp = optionType opt
-	
 	checkFieldName fieldName
 	checkValidFlags fieldName shorts longs
 	checkUniqueKey key
 	checkUniqueFlags fieldName shorts longs
 	
-	case parseOptType def of
+	case optionTypeParse (optionType opt) def of
 		Right _ -> return ()
 		Left err -> OptionsM (throwError ("Invalid default value for option " ++ show fieldName ++ ": " ++ err))
 	
@@ -382,11 +380,12 @@ option fieldName f = do
 		, stSeenLongFlags = Set.union (Set.fromList longs) (stSeenLongFlags st)
 		}))
 	
+	let unary = optionTypeUnary (optionType opt)
 	putOptionDecl
 		(mkName fieldName)
-		thType
+		(optionTypeTemplateType (optionType opt))
 		[| [OptionInfo (OptionKey key) shorts longs def unary desc $groupInfoExp] |]
-		[| parseOptionTok (OptionKey key) $parseExp def |]
+		[| parseOptionTok (OptionKey key) $(optionTypeTemplateParse (optionType opt)) def |]
 
 parseOptionTok :: OptionKey -> (String -> Either String a) -> String -> ParserM optType a
 parseOptionTok key p def = do
