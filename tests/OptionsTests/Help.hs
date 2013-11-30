@@ -35,11 +35,11 @@ suite_AddHelpFlags = suite "addHelpFlags"
 	test_AddHelpFlags_NoAll
 	test_AddHelpFlags_Subcommand
 
-groupInfoHelp :: Maybe GroupInfo
-groupInfoHelp = Just (GroupInfo
-	{ groupInfoName = "all"
-	, groupInfoTitle = "Help Options"
-	, groupInfoDescription = "Show all help options."
+groupHelp :: Maybe Group
+groupHelp = Just (Group
+	{ groupName = "all"
+	, groupTitle = "Help Options"
+	, groupDescription = "Show all help options."
 	})
 
 infoHelpSummary :: [Char] -> [String] -> OptionInfo
@@ -50,7 +50,7 @@ infoHelpSummary shorts longs = OptionInfo
 	, optionInfoDefault = "false"
 	, optionInfoUnary = True
 	, optionInfoDescription = "Show option summary." 
-	, optionInfoGroup = groupInfoHelp
+	, optionInfoGroup = groupHelp
 	}
 
 infoHelpAll :: OptionInfo
@@ -61,7 +61,7 @@ infoHelpAll = OptionInfo
 	, optionInfoDefault = "false"
 	, optionInfoUnary = True
 	, optionInfoDescription = "Show all help options." 
-	, optionInfoGroup = groupInfoHelp
+	, optionInfoGroup = groupHelp
 	}
 
 test_AddHelpFlags_None :: Test
@@ -139,15 +139,15 @@ test_AddHelpFlags_NoAll = assertions "no-all" $ do
 
 test_AddHelpFlags_Subcommand :: Test
 test_AddHelpFlags_Subcommand = assertions "subcommand" $ do
-	let cmd1_a = OptionInfo (OptionKey "test.cmd1.a") ['a'] [] "" False "" (Just GroupInfo
-		{ groupInfoName = "foo"
-		, groupInfoTitle = "Foo Options"
-		, groupInfoDescription = "More Foo Options"
+	let cmd1_a = OptionInfo (OptionKey "test.cmd1.a") ['a'] [] "" False "" (Just Group
+		{ groupName = "foo"
+		, groupTitle = "Foo Options"
+		, groupDescription = "More Foo Options"
 		})
-	let cmd1_b = OptionInfo (OptionKey "test.cmd1.b") ['b'] [] "" False "" (Just GroupInfo
-		{ groupInfoName = "all"
-		, groupInfoTitle = "All Options"
-		, groupInfoDescription = "More All Options"
+	let cmd1_b = OptionInfo (OptionKey "test.cmd1.b") ['b'] [] "" False "" (Just Group
+		{ groupName = "all"
+		, groupTitle = "All Options"
+		, groupDescription = "More All Options"
 		})
 	let commandDefs = OptionDefinitions
 		[]
@@ -162,10 +162,10 @@ test_AddHelpFlags_Subcommand = assertions "subcommand" $ do
 		, optionInfoDefault = "false"
 		, optionInfoUnary = True
 		, optionInfoDescription = "More Foo Options" 
-		, optionInfoGroup = Just (GroupInfo
-			{ groupInfoName = "all"
-			, groupInfoTitle = "Help Options"
-			, groupInfoDescription = "Show all help options."
+		, optionInfoGroup = Just (Group
+			{ groupName = "all"
+			, groupTitle = "Help Options"
+			, groupDescription = "Show all help options."
 			})
 		}
 	
@@ -190,10 +190,10 @@ variedOptions = addHelpFlags $ OptionDefinitions
 	, OptionInfo (OptionKey "test.long1") [] ["a-looooooooooooong-option"] "def" False "description here" Nothing
 	, OptionInfo (OptionKey "test.long2") [] ["a-loooooooooooooong-option"] "def" False "description here" Nothing
 	, OptionInfo (OptionKey "test.b") ['b'] ["long-b"] "def" False "b description here" Nothing
-	, OptionInfo (OptionKey "test.g") ['g'] ["long-g"] "def" False "g description here" (Just GroupInfo
-		{ groupInfoName = "group"
-		, groupInfoTitle = "Grouped options"
-		, groupInfoDescription = "Show grouped options."
+	, OptionInfo (OptionKey "test.g") ['g'] ["long-g"] "def" False "g description here" (Just Group
+		{ groupName = "group"
+		, groupTitle = "Grouped options"
+		, groupDescription = "Show grouped options."
 		})
 	]
 	[ ("cmd1",
@@ -201,10 +201,10 @@ variedOptions = addHelpFlags $ OptionDefinitions
 		])
 	, ("cmd2",
 		[ OptionInfo (OptionKey "test.cmd2.y") ['y'] ["long-y"] "def" False "y description here" Nothing
-		, OptionInfo (OptionKey "test.cmd2.g2") [] ["long-g2"] "def" False "g2 description here" (Just GroupInfo
-			{ groupInfoName = "group"
-			, groupInfoTitle = "Grouped options"
-			, groupInfoDescription = "Show grouped options."
+		, OptionInfo (OptionKey "test.cmd2.g2") [] ["long-g2"] "def" False "g2 description here" (Just Group
+			{ groupName = "group"
+			, groupTitle = "Grouped options"
+			, groupDescription = "Show grouped options."
 			})
 		])
 	]

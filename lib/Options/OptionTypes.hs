@@ -17,6 +17,8 @@ import qualified Filesystem.Path as Path
 import qualified Filesystem.Path.Rules as Path
 import           Language.Haskell.TH
 
+import           Options.Types
+
 data Option a = Option
 	{
 	-- | Short flags are a single character. When entered by a user,
@@ -59,18 +61,6 @@ data Option a = Option
 	-- | Which group the option is in. See the \"Option groups\" section
 	-- for details.
 	, optionGroup :: Group
-	}
-
-data Group = Group
-	{ groupName :: Maybe String
-	
-	-- | A short title for the group, which is used when printing
-	-- @--help@ output.
-	, groupTitle :: String
-	
-	-- | A description of the group, which is used when printing
-	-- @--help@ output.
-	, groupDescription :: String
 	}
 
 -- | An option's type determines how the option will be parsed, and which

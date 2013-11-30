@@ -30,10 +30,10 @@ addHelpFlags (OptionDefinitions opts subcmds) = OptionDefinitions withHelp subcm
 	
 	withHelp = optHelpSummary ++ optsGroupHelp ++ opts
 	
-	groupHelp = GroupInfo
-		{ groupInfoName = "all"
-		, groupInfoTitle = "Help Options"
-		, groupInfoDescription = "Show all help options."
+	groupHelp = Group
+		{ groupName = "all"
+		, groupTitle = "Help Options"
+		, groupDescription = "Show all help options."
 		}
 	
 	optSummary = OptionInfo
@@ -47,12 +47,12 @@ addHelpFlags (OptionDefinitions opts subcmds) = OptionDefinitions withHelp subcm
 		}
 	
 	optGroupHelp group flag = OptionInfo
-		{ optionInfoKey = OptionKeyHelpGroup (groupInfoName group)
+		{ optionInfoKey = OptionKeyHelpGroup (groupName group)
 		, optionInfoShortFlags = []
 		, optionInfoLongFlags = [flag]
 		, optionInfoDefault = "false"
 		, optionInfoUnary = True
-		, optionInfoDescription = groupInfoDescription group
+		, optionInfoDescription = groupDescription group
 		, optionInfoGroup = Just groupHelp
 		}
 	
@@ -72,10 +72,10 @@ addHelpFlags (OptionDefinitions opts subcmds) = OptionDefinitions withHelp subcm
 				}]
 	
 	optsGroupHelp = do
-		let (groupsAndOpts, _) = uniqueGroupInfos opts
+		let (groupsAndOpts, _) = uniqueGroups opts
 		let groups = [g | (g, _) <- groupsAndOpts]
 		group <- (groupHelp : groups)
-		let flag = "help-" ++ groupInfoName group
+		let flag = "help-" ++ groupName group
 		if Set.member flag longFlags
 			then []
 			else [optGroupHelp group flag]
@@ -86,11 +86,11 @@ addHelpFlags (OptionDefinitions opts subcmds) = OptionDefinitions withHelp subcm
 			opt <- subcmdOpts ++ optsGroupHelp
 			optionInfoLongFlags opt
 		
-		let (groupsAndOpts, _) = uniqueGroupInfos subcmdOpts
+		let (groupsAndOpts, _) = uniqueGroups subcmdOpts
 		let groups = [g | (g, _) <- groupsAndOpts]
 		let newOpts = do
 			group <- groups
-			let flag = "help-" ++ groupInfoName group
+			let flag = "help-" ++ groupName group
 			if Set.member flag (Set.union longFlags subcmdLongFlags)
 				then []
 				else [optGroupHelp group flag]
@@ -104,14 +104,14 @@ checkHelpFlag tokens = flag where
 		case k of
 			OptionKeyHelpSummary -> return HelpSummary
 			OptionKeyHelpGroup "all" -> return HelpAll
-			OptionKeyHelpGroup groupName -> return (HelpGroup groupName)
+			OptionKeyHelpGroup name -> return (HelpGroup name)
 			_ -> []
 
 helpFor :: HelpFlag -> OptionDefinitions a -> Maybe String -> String
 helpFor flag defs subcmd = case flag of
 	HelpSummary -> execWriter (showHelpSummary defs subcmd)
 	HelpAll -> execWriter (showHelpAll defs subcmd)
-	HelpGroup groupName -> execWriter (showHelpOneGroup defs groupName subcmd)
+	HelpGroup name -> execWriter (showHelpOneGroup defs name subcmd)
 
 showOptionHelp :: OptionInfo -> Writer String ()
 showOptionHelp info = do
@@ -146,10 +146,10 @@ showHelpSummary (OptionDefinitions mainOpts subcmds) subcmd = do
 		opts <- lookup subcmdName subcmds
 		return (subcmdName, opts)
 	
-	let (groupInfos, ungroupedMainOptions) = uniqueGroupInfos mainOpts
+	let (groupInfos, ungroupedMainOptions) = uniqueGroups mainOpts
 	
 	-- Always print --help group
-	let hasHelp = filter (\(g,_) -> groupInfoName g == "all") groupInfos
+	let hasHelp = filter (\(g,_) -> groupName g == "all") groupInfos
 	forM_ hasHelp showHelpGroup
 	
 	tell "Application Options:\n"
@@ -179,10 +179,10 @@ showHelpAll (OptionDefinitions mainOpts subcmds) subcmd = do
 		opts <- lookup subcmdName subcmds
 		return (subcmdName, opts)
 	
-	let (groupInfos, ungroupedMainOptions) = uniqueGroupInfos mainOpts
+	let (groupInfos, ungroupedMainOptions) = uniqueGroups mainOpts
 	
 	-- Always print --help group first, if present
-	let (hasHelp, noHelp) = partition (\(g,_) -> groupInfoName g == "all") groupInfos
+	let (hasHelp, noHelp) = partition (\(g,_) -> groupName g == "all") groupInfos
 	forM_ hasHelp showHelpGroup
 	forM_ noHelp showHelpGroup
 	
@@ -203,31 +203,31 @@ showHelpAll (OptionDefinitions mainOpts subcmds) subcmd = do
 			forM_ subOpts showOptionHelp
 			tell "\n"
 
-showHelpGroup :: (GroupInfo, [OptionInfo]) -> Writer String ()
+showHelpGroup :: (Group, [OptionInfo]) -> Writer String ()
 showHelpGroup (groupInfo, opts) = do
-	tell (groupInfoTitle groupInfo ++ ":\n")
+	tell (groupTitle groupInfo ++ ":\n")
 	forM_ opts showOptionHelp
 	tell "\n"
 
 showHelpOneGroup :: OptionDefinitions a -> String -> Maybe String -> Writer String ()
-showHelpOneGroup (OptionDefinitions mainOpts subcmds) groupName subcmd = do
+showHelpOneGroup (OptionDefinitions mainOpts subcmds) name subcmd = do
 	let opts = case subcmd of
 		Nothing -> mainOpts
 		Just n -> case lookup n subcmds of
 			Just infos -> mainOpts ++ infos -- both
 			Nothing -> mainOpts
-	let (groupInfos, _) = uniqueGroupInfos opts
+	let (groupInfos, _) = uniqueGroups opts
 	
 	-- Always print --help group
-	let group = filter (\(g,_) -> groupInfoName g == groupName) groupInfos
+	let group = filter (\(g,_) -> groupName g == name) groupInfos
 	forM_ group showHelpGroup
 
-uniqueGroupInfos :: [OptionInfo] -> ([(GroupInfo, [OptionInfo])], [OptionInfo])
-uniqueGroupInfos allOptions = (Map.elems infoMap, ungroupedOptions) where
+uniqueGroups :: [OptionInfo] -> ([(Group, [OptionInfo])], [OptionInfo])
+uniqueGroups allOptions = (Map.elems infoMap, ungroupedOptions) where
 	infoMap = Map.fromListWith merge $ do
 		opt <- allOptions
 		case optionInfoGroup opt of
 			Nothing -> []
-			Just g -> [(groupInfoName g, (g, [opt]))]
+			Just g -> [(groupName g, (g, [opt]))]
 	merge (g, opts1) (_, opts2) = (g, opts2 ++ opts1)
 	ungroupedOptions = [o | o <- allOptions, isNothing (optionInfoGroup o)]

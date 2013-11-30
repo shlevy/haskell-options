@@ -335,7 +335,7 @@ option :: String -- ^ Field name
        -> OptionsM ()
 option fieldName f = do
 	let emptyGroup = Group
-		{ groupName = Nothing
+		{ groupName = ""
 		, groupTitle = ""
 		, groupDescription = ""
 		}
@@ -361,8 +361,8 @@ option fieldName f = do
 	let optGroupDesc = groupTitle optGroup
 	let optGroupHelpDesc = groupDescription optGroup
 	let groupInfoExp = case groupName optGroup of
-		Nothing -> [| Nothing |]
-		Just n -> [| Just (GroupInfo n optGroupDesc optGroupHelpDesc) |]
+		"" -> [| Nothing |]
+		n -> [| Just (Group n optGroupDesc optGroupHelpDesc) |]
 	
 	checkFieldName fieldName
 	checkValidFlags fieldName shorts longs
@@ -699,7 +699,7 @@ group :: String -- ^ Group name
       -> (Group -> Group)
       -> Group
 group name f = f (Group
-	{ groupName = Just name
+	{ groupName = name
 	, groupTitle = ""
 	, groupDescription = ""
 	})

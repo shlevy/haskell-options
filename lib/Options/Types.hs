@@ -3,7 +3,7 @@
 -- License: MIT
 module Options.Types
 	( OptionDefinitions(..)
-	, GroupInfo(..)
+	, Group(..)
 	, OptionKey(..)
 	, OptionInfo(..)
 	, Token(..)
@@ -15,10 +15,17 @@ import qualified Data.Map as Map
 
 data OptionDefinitions a = OptionDefinitions [OptionInfo] [(String, [OptionInfo])]
 
-data GroupInfo = GroupInfo
-	{ groupInfoName :: String
-	, groupInfoTitle :: String
-	, groupInfoDescription :: String
+data Group = Group
+	{
+	  groupName :: String
+	
+	-- | A short title for the group, which is used when printing
+	-- @--help@ output.
+	, groupTitle :: String
+	
+	-- | A description of the group, which is used when printing
+	-- @--help@ output.
+	, groupDescription :: String
 	}
 	deriving (Eq, Show)
 
@@ -35,7 +42,7 @@ data OptionInfo = OptionInfo
 	, optionInfoDefault :: String
 	, optionInfoUnary :: Bool
 	, optionInfoDescription :: String
-	, optionInfoGroup :: Maybe GroupInfo
+	, optionInfoGroup :: Maybe Group
 	}
 	deriving (Eq, Show)
 
