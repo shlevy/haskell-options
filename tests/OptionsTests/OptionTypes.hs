@@ -47,13 +47,10 @@ suite_OptionTypes = suite "option-types"
 	test_Enum
 
 parseValid :: (Show a, Eq a) => OptionType a -> String -> a -> Assertion
-parseValid t s expected = equal (optionParser t s) (Right expected)
+parseValid t s expected = equal (optionTypeParse t s) (Right expected)
 
 parseInvalid :: (Show a, Eq a) => OptionType a -> String -> String -> Assertion
-parseInvalid t s err = equal (optionParser t s) (Left err)
-
-optionParser :: OptionType a -> String -> Either String a
-optionParser (OptionType _ _ p _) = p
+parseInvalid t s err = equal (optionTypeParse t s) (Left err)
 
 test_Bool :: Test
 test_Bool = assertions "bool" $ do

@@ -43,6 +43,7 @@ data OptionInfo = OptionInfo
 	, optionInfoUnary :: Bool
 	, optionInfoDescription :: String
 	, optionInfoGroup :: Maybe Group
+	, optionInfoTypeName :: String
 	}
 	deriving (Eq, Show)
 

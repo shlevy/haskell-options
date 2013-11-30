@@ -381,10 +381,11 @@ option fieldName f = do
 		}))
 	
 	let unary = optionTypeUnary (optionType opt)
+	let typeName = optionTypeName (optionType opt)
 	putOptionDecl
 		(mkName fieldName)
 		(optionTypeTemplateType (optionType opt))
-		[| [OptionInfo (OptionKey key) shorts longs def unary desc $groupInfoExp] |]
+		[| [OptionInfo (OptionKey key) shorts longs def unary desc $groupInfoExp typeName] |]
 		[| parseOptionTok (OptionKey key) $(optionTypeTemplateParse (optionType opt)) def |]
 
 parseOptionTok :: OptionKey -> (String -> Either String a) -> String -> ParserM optType a
