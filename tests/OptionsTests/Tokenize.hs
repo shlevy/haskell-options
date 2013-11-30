@@ -36,34 +36,34 @@ suite_Tokenize = suite "tokenize"
 
 commandDefs :: OptionDefinitions ()
 commandDefs = OptionDefinitions
-	[ OptionInfo (OptionKey "test.a") ['a'] ["long-a"] "default" False "" Nothing ""
-	, OptionInfo (OptionKey "test.x") ['x'] ["long-x"] "default" True "" Nothing ""
-	, OptionInfo (OptionKey "test.y") ['y'] ["long-y"] "default" True "" Nothing ""
-	, OptionInfo (OptionKey "test.z") ['z'] ["long-z"] "default" True "" Nothing ""
+	[ OptionInfo (OptionKey "test.a") ['a'] ["long-a"] "default" False "" Nothing Nothing ""
+	, OptionInfo (OptionKey "test.x") ['x'] ["long-x"] "default" True "" Nothing Nothing ""
+	, OptionInfo (OptionKey "test.y") ['y'] ["long-y"] "default" True "" Nothing Nothing ""
+	, OptionInfo (OptionKey "test.z") ['z'] ["long-z"] "default" True "" Nothing Nothing ""
 	]
 	[]
 
 subcommandDefs :: OptionDefinitions ()
 subcommandDefs = OptionDefinitions
-	[ OptionInfo (OptionKey "test.a") ['a'] ["long-a"] "default" False "" Nothing ""
-	, OptionInfo (OptionKey "test.b") ['b'] ["long-b"] "default" False "" Nothing ""
-	, OptionInfo (OptionKey "test.x") ['x'] ["long-x"] "default" True "" Nothing ""
-	, OptionInfo (OptionKey "test.y") ['y'] ["long-y"] "default" True "" Nothing ""
-	, OptionInfo (OptionKey "test.z") ['z'] ["long-z"] "default" True "" Nothing ""
+	[ OptionInfo (OptionKey "test.a") ['a'] ["long-a"] "default" False "" Nothing Nothing ""
+	, OptionInfo (OptionKey "test.b") ['b'] ["long-b"] "default" False "" Nothing Nothing ""
+	, OptionInfo (OptionKey "test.x") ['x'] ["long-x"] "default" True "" Nothing Nothing ""
+	, OptionInfo (OptionKey "test.y") ['y'] ["long-y"] "default" True "" Nothing Nothing ""
+	, OptionInfo (OptionKey "test.z") ['z'] ["long-z"] "default" True "" Nothing Nothing ""
 	]
 	[ ("sub1",
-		[ OptionInfo (OptionKey "sub.d") ['d'] ["long-d"] "default" False "" Nothing ""
-		, OptionInfo (OptionKey "sub.e") ['e'] ["long-e"] "default" True "" Nothing ""
+		[ OptionInfo (OptionKey "sub.d") ['d'] ["long-d"] "default" False "" Nothing Nothing ""
+		, OptionInfo (OptionKey "sub.e") ['e'] ["long-e"] "default" True "" Nothing Nothing ""
 		])
 	, ("sub2",
-		[ OptionInfo (OptionKey "sub.d") ['d'] ["long-d"] "default" True "" Nothing ""
-		, OptionInfo (OptionKey "sub.e") ['e'] ["long-e"] "default" True "" Nothing ""
+		[ OptionInfo (OptionKey "sub.d") ['d'] ["long-d"] "default" True "" Nothing Nothing ""
+		, OptionInfo (OptionKey "sub.e") ['e'] ["long-e"] "default" True "" Nothing Nothing ""
 		])
 	]
 
 unicodeDefs :: OptionDefinitions ()
 unicodeDefs = OptionDefinitions
-	[ OptionInfo (OptionKey "test.a") ['\12354'] ["long-\12354"] "default" False "" Nothing ""
+	[ OptionInfo (OptionKey "test.a") ['\12354'] ["long-\12354"] "default" False "" Nothing Nothing ""
 	]
 	[]
 

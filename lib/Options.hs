@@ -382,10 +382,15 @@ option fieldName f = do
 	
 	let unary = optionTypeUnary (optionType opt)
 	let typeName = optionTypeName (optionType opt)
+	let locPackage = loc_package loc
+	let locModule = loc_module loc
+	let locFilename = loc_filename loc
+	let locLine = case loc_start loc of
+		(line, _) -> toInteger line
 	putOptionDecl
 		(mkName fieldName)
 		(optionTypeTemplateType (optionType opt))
-		[| [OptionInfo (OptionKey key) shorts longs def unary desc $groupInfoExp typeName] |]
+		[| [OptionInfo (OptionKey key) shorts longs def unary desc $groupInfoExp (Just (Location locPackage locModule locFilename locLine)) typeName] |]
 		[| parseOptionTok (OptionKey key) $(optionTypeTemplateParse (optionType opt)) def |]
 
 parseOptionTok :: OptionKey -> (String -> Either String a) -> String -> ParserM optType a

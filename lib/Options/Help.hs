@@ -44,6 +44,7 @@ addHelpFlags (OptionDefinitions opts subcmds) = OptionDefinitions withHelp subcm
 		, optionInfoUnary = True
 		, optionInfoDescription = "Show option summary."
 		, optionInfoGroup = Just groupHelp
+		, optionInfoLocation = Nothing
 		, optionInfoTypeName = "help"
 		}
 	
@@ -55,6 +56,7 @@ addHelpFlags (OptionDefinitions opts subcmds) = OptionDefinitions withHelp subcm
 		, optionInfoUnary = True
 		, optionInfoDescription = groupDescription group
 		, optionInfoGroup = Just groupHelp
+		, optionInfoLocation = Nothing
 		, optionInfoTypeName = "help"
 		}
 	

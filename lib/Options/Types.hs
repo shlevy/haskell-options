@@ -5,6 +5,7 @@ module Options.Types
 	( OptionDefinitions(..)
 	, Group(..)
 	, OptionKey(..)
+	, Location(..)
 	, OptionInfo(..)
 	, Token(..)
 	, tokenFlagName
@@ -35,6 +36,14 @@ data OptionKey
 	| OptionKeyHelpGroup String
 	deriving (Eq, Ord, Show)
 
+data Location = Location
+	{ locationPackage :: String
+	, locationModule :: String
+	, locationFilename :: String
+	, locationLine :: Integer
+	}
+	deriving (Eq, Show)
+
 data OptionInfo = OptionInfo
 	{ optionInfoKey :: OptionKey
 	, optionInfoShortFlags :: [Char]
@@ -43,6 +52,7 @@ data OptionInfo = OptionInfo
 	, optionInfoUnary :: Bool
 	, optionInfoDescription :: String
 	, optionInfoGroup :: Maybe Group
+	, optionInfoLocation :: Maybe Location
 	, optionInfoTypeName :: String
 	}
 	deriving (Eq, Show)
