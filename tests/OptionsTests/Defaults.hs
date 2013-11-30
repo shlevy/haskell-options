@@ -14,10 +14,8 @@ import qualified Data.Map as Map
 import           Data.Map (Map)
 import qualified Data.Set as Set
 import           Data.Set (Set)
-import           Data.Text (Text)
 import           Data.Word
 
-import           Filesystem.Path.CurrentOS (FilePath)
 import           Test.Chell
 
 import           Options
@@ -27,9 +25,6 @@ $(defineOptions "AllOptions" $ do
 	boolOption "s_Bool" "s_bool" True ""
 	stringOption "s_String" "s_string" "abc" ""
 	stringsOption "s_Strings" "s_strings" ["a", "b", "c"] ""
-	textOption "s_Text" "s_text" "abc" ""
-	textsOption "s_Texts" "s_texts" ["a", "b", "c"] ""
-	pathOption "s_Path" "s_path" "a/b/c" ""
 	intOption "s_Int" "s_int" 123 ""
 	integerOption "s_Integer" "s_integer" 123 ""
 	floatOption "s_Float" "s_float" 123.5 ""
@@ -45,16 +40,6 @@ $(defineOptions "AllOptions" $ do
 		{ optionLongFlags = ["t_String"]
 		, optionType = optionTypeString
 		, optionDefault = "abc"
-		})
-	option "t_Text" (\o -> o
-		{ optionLongFlags = ["t_Text"]
-		, optionType = optionTypeText
-		, optionDefault = "abc"
-		})
-	option "t_FilePath" (\o -> o
-		{ optionLongFlags = ["t_FilePath"]
-		, optionType = optionTypeFilePath
-		, optionDefault = "a/b/c"
 		})
 	option "t_Int" (\o -> o
 		{ optionLongFlags = ["t_Int"]
@@ -163,9 +148,6 @@ test_Defaults = assertions "defaults" $ do
 	$expect (equal (s_Bool def) True)
 	$expect (equal (s_String def) ("abc" :: String))
 	$expect (equal (s_Strings def) (["a", "b", "c"] :: [String]))
-	$expect (equal (s_Text def) ("abc" :: Text))
-	$expect (equal (s_Texts def) (["a", "b", "c"] :: [Text]))
-	$expect (equal (s_Path def) ("a/b/c" :: FilePath))
 	$expect (equal (s_Int def) (123 :: Int))
 	$expect (equal (s_Integer def) (123 :: Integer))
 	$expect (equal (s_Float def) (123.5 :: Float))
@@ -174,8 +156,6 @@ test_Defaults = assertions "defaults" $ do
 	-- Explicitly typed option definitions
 	$expect (equal (t_Bool def) True)
 	$expect (equal (t_String def) ("abc" :: String))
-	$expect (equal (t_Text def) ("abc" :: Text))
-	$expect (equal (t_FilePath def) ("a/b/c" :: FilePath))
 	$expect (equal (t_Int def) (123 :: Int))
 	$expect (equal (t_Int8 def) (123 :: Int8))
 	$expect (equal (t_Int16 def) (123 :: Int16))

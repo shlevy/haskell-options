@@ -12,11 +12,8 @@ module OptionsTests.OptionTypes
 import           Data.Int
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import qualified Data.Text as Text
 import           Data.Word
 
-import qualified Filesystem.Path.Rules as Path
-import qualified Filesystem.Path.CurrentOS ()
 import           Test.Chell
 
 import           Options.OptionTypes
@@ -25,8 +22,6 @@ suite_OptionTypes :: Suite
 suite_OptionTypes = suite "option-types"
 	test_Bool
 	test_String
-	test_Text
-	test_FilePath
 	test_Int
 	test_Int8
 	test_Int16
@@ -68,36 +63,6 @@ test_String = assertions "string" $ do
 	$expect (valid "\12354" "\12354")
 	$expect (valid "\56507" "\56507")
 	$expect (valid "\61371" "\61371")
-
-test_Text :: Test
-test_Text = assertions "text" $ do
-	let p = Text.pack
-	let valid = parseValid optionTypeText
-	let invalid = parseInvalid optionTypeText
-	
-	$expect (valid "" (p ""))
-	$expect (valid "a" (p "a"))
-	$expect (valid "\12354" (p "\12354"))
-	$expect (valid "\56507" (p "\65533"))
-	$expect (valid "\61371" (p "\61371"))
-
-test_FilePath :: Test
-test_FilePath = assertions "filepath" $ do
-	let p = Path.decodeString Path.posix_ghc704
-	let valid = parseValid optionTypeFilePath
-	let invalid = parseInvalid optionTypeFilePath
-	
-	$expect (valid "" (p ""))
-	$expect (valid "a" (p "a"))
-	$expect (valid "a-\12403-c.txt" (p "a-\12403-c.txt"))
-#if defined(CABAL_OS_WINDOWS)
-	$expect (valid "a-\61371-c.txt" (p "a-\61371-c.txt"))
-#elif __GLASGOW_HASKELL__ == 702
-	$expect (valid "a-\61371-c.txt" (p "a-\56507-c.txt"))
-#else
-	$expect (valid "a-\56507-c.txt" (p "a-\56507-c.txt"))
-	$expect (valid "a-\61371-c.txt" (p "a-\61371-c.txt"))
-#endif
 
 test_Int :: Test
 test_Int = assertions "int" $ do

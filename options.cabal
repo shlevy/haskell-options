@@ -87,21 +87,17 @@ library
   cc-options: -Wall -O2
   hs-source-dirs: lib
 
-  if os(windows)
-      cpp-options: -DCABAL_OS_WINDOWS
-
   if !os(windows) && impl(ghc < 7.2)
       cpp-options: -DOPTIONS_ENCODING_UTF8
       c-sources: cbits/utf8.c
+      build-depends:
+          bytestring >= 0.9
 
   build-depends:
       base >= 4.1 && < 5.0
     , transformers >= 0.2
-    , bytestring >= 0.9
     , containers >= 0.1
     , monads-tf >= 0.1
-    , system-filepath >= 0.4 && < 0.5
-    , text >= 0.7
     , template-haskell >= 2.3
 
   exposed-modules:

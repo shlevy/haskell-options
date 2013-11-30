@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 -- |
@@ -10,11 +9,8 @@ import           Data.Int
 import           Data.List (intercalate)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import qualified Data.Text as Text
 import           Data.Word
 
-import qualified Filesystem.Path as Path
-import qualified Filesystem.Path.Rules as Path
 import           Language.Haskell.TH
 
 import           Options.Types
@@ -105,29 +101,6 @@ parseBool s = case s of
 -- they will be stored using GHC 7.4's encoding for mixed-use strings.
 optionTypeString :: OptionType String
 optionTypeString = OptionType (ConT ''String) False Right [| Right |] "text"
-
--- | Store an option value as a @'Text.Text'@. The value is decoded to Unicode
--- first, if needed. If the value cannot be decoded, the stored value may have
--- the Unicode substitution character @'\65533'@ in place of some of the
--- original input.
-optionTypeText :: OptionType Text.Text
-optionTypeText = OptionType (ConT ''Text.Text) False parseText [| parseText |] "text"
-
-parseText :: String -> Either String Text.Text
-parseText = Right . Text.pack
-
--- | Store an option value as a @'Path.FilePath'@.
-optionTypeFilePath :: OptionType Path.FilePath
-optionTypeFilePath = OptionType (ConT ''Path.FilePath) False parsePath [| parsePath |] "filepath"
-
-parsePath :: String -> Either String Path.FilePath
-#if defined(CABAL_OS_WINDOWS)
-parsePath s = Right (Path.decodeString Path.windows s)
-#elif __GLASGOW_HASKELL__ == 702
-parsePath s = Right (Path.decodeString Path.posix_ghc702 s)
-#else
-parsePath s = Right (Path.decodeString Path.posix_ghc704 s)
-#endif
 
 parseInteger :: String -> Either String Integer
 parseInteger s = parsed where

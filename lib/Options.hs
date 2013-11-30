@@ -1,4 +1,3 @@
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 -- |
@@ -69,9 +68,6 @@ module Options
 	, boolOption
 	, stringOption
 	, stringsOption
-	, textOption
-	, textsOption
-	, pathOption
 	, intOption
 	, integerOption
 	, floatOption
@@ -98,8 +94,6 @@ module Options
 	, optionTypeBool
 	
 	, optionTypeString
-	, optionTypeText
-	, optionTypeFilePath
 	
 	, optionTypeInt
 	, optionTypeInt8
@@ -153,13 +147,10 @@ import           Control.Monad.State (StateT, execStateT, get, modify)
 import           Data.List (foldl', intercalate)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import qualified Data.Text as Text
 import qualified System.Environment
 import           System.Exit (exitFailure, exitSuccess)
 import           System.IO
 
-import qualified Filesystem.Path as Path
-import qualified Filesystem.Path.Rules as Path
 import           Language.Haskell.TH
 import           Language.Haskell.TH.Syntax (mkNameG_tc)
 
@@ -588,52 +579,6 @@ stringsOption name flag def desc = option name (\o -> o
 	{ optionLongFlags = [flag]
 	, optionDefault = intercalate "," def
 	, optionType = optionTypeList ',' optionTypeString
-	, optionDescription = desc
-	})
-
--- | Define an option of type @'Text.Text'@. This is a simple wrapper around
--- 'option'.
-textOption :: String -- ^ Field name
-           -> String -- ^ Long flag
-           -> Text.Text -- ^ Default value
-           -> String -- ^ Description in @--help@
-           -> OptionsM ()
-textOption name flag def desc = option name (\o -> o
-	{ optionLongFlags = [flag]
-	, optionDefault = Text.unpack def
-	, optionType = optionTypeText
-	, optionDescription = desc
-	})
-
--- | Define an option of type @['Text.Text']@. This is a simple wrapper around
--- 'option'. Items are comma-separated.
-textsOption :: String -- ^ Field name
-            -> String -- ^ Long flag
-            -> [Text.Text] -- ^ Default value
-            -> String -- ^ Description in @--help@
-            -> OptionsM ()
-textsOption name flag def desc = option name (\o -> o
-	{ optionLongFlags = [flag]
-	, optionDefault = Text.unpack (Text.intercalate (Text.pack ",") def)
-	, optionType = optionTypeList ',' optionTypeText
-	, optionDescription = desc
-	})
-
--- | Define an option of type @'Path.FilePath'@. This is a simple wrapper
--- around 'option'.
-pathOption :: String -- ^ Field name
-           -> String -- ^ Long flag
-           -> Path.FilePath -- ^ Default value
-           -> String -- ^ Description in @--help@
-           -> OptionsM ()
-pathOption name flag def desc = option name (\o -> o
-	{ optionLongFlags = [flag]
-#if defined(CABAL_OS_WINDOWS)
-	, optionDefault = Path.encodeString Path.windows def
-#else
-	, optionDefault = Path.encodeString Path.posix_ghc704 def
-#endif
-	, optionType = optionTypeFilePath
 	, optionDescription = desc
 	})
 

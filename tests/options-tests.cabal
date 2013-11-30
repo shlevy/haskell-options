@@ -16,9 +16,6 @@ executable options_tests
   if flag(coverage)
     ghc-options: -fhpc
 
-  if os(windows)
-      cpp-options: -DCABAL_OS_WINDOWS
-
   if !os(windows) && impl(ghc < 7.2)
       cpp-options: -DOPTIONS_ENCODING_UTF8
       c-sources: ../cbits/utf8.c
@@ -32,8 +29,6 @@ executable options_tests
     , monads-tf
     , QuickCheck
     , split
-    , system-filepath >= 0.4 && < 0.5
     , template-haskell
-    , text
     , transformers
 
