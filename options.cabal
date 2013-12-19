@@ -74,12 +74,12 @@ extra-source-files:
   tests/OptionsTests/Util.hs
 
 source-repository head
-  type: bazaar
-  location: https://john-millikin.com/branches/haskell-options/0.1/
+  type: git
+  location: https://john-millikin.com/code/haskell-options/
 
 source-repository this
-  type: bazaar
-  location: https://john-millikin.com/branches/haskell-options/0.1/
+  type: git
+  location: https://john-millikin.com/code/haskell-options/
   tag: haskell-options_0.1.1
 
 library
