@@ -151,6 +151,7 @@ import           Control.Monad.IO.Class
 import           Control.Monad.Reader (Reader, runReader, ask)
 import           Control.Monad.State (StateT, execStateT, get, modify)
 import           Data.List (foldl', intercalate)
+import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.Text as Text
 import qualified System.Environment
@@ -177,13 +178,13 @@ import           Options.Util
 -- defined options.
 class Options a where
 	optionsDefs :: OptionDefinitions a
-	optionsParse' :: TokensFor a -> Either String a
+	optionsParse' :: Tokens -> Either String a
 	optionsMeta :: OptionsMeta a
 
-optionsParse :: Options a => TokensFor a -> Either String (a, [String])
-optionsParse tokens@(TokensFor _ args) = case optionsParse' tokens of
+optionsParse :: Options a => Tokens -> Either String (a, [String])
+optionsParse tokens = case optionsParse' tokens of
 	Left err -> Left err
-	Right opts -> Right (opts, args)
+	Right opts -> Right (opts, tokensArgv tokens)
 
 data OptionsMeta a = OptionsMeta
 	{ optionsMetaName :: Name
@@ -296,7 +297,7 @@ getOptionsMeta loc typeName st = do
 	let longs = Set.toList (stSeenLongFlags st)
 	[| OptionsMeta (mkNameG_tc pkg mod' typeName) (Set.fromList keys) (Set.fromList shorts) (Set.fromList longs) |]
 
-newtype ParserM optType a = ParserM { unParserM :: TokensFor optType -> Either String a }
+newtype ParserM optType a = ParserM { unParserM :: Tokens -> Either String a }
 
 instance Monad (ParserM optType) where
 	return x = ParserM (\_ -> Right x)
@@ -384,18 +385,21 @@ option fieldName f = do
 	putOptionDecl
 		(mkName fieldName)
 		thType
-		[| [OptionInfo key shorts longs def unary desc $groupInfoExp] |]
-		[| parseOptionTok key $parseExp def |]
+		[| [OptionInfo (OptionKey key) shorts longs def unary desc $groupInfoExp] |]
+		[| parseOptionTok (OptionKey key) $parseExp def |]
 
-parseOptionTok :: String -> (String -> Either String a) -> String -> ParserM optType a
+parseOptionTok :: OptionKey -> (String -> Either String a) -> String -> ParserM optType a
 parseOptionTok key p def = do
-	TokensFor tokens _ <- ParserM (\t -> Right t)
-	case lookup key tokens of
+	tokens <- ParserM (\t -> Right t)
+	case Map.lookup key (tokensMap tokens) of
 		Nothing -> case p def of
 			-- shouldn't happen
 			Left err -> ParserM (\_ -> Left ("Internal error while parsing default options: " ++ err))
 			Right a -> return a
-		Just (flagName, val) -> case p val of
+		Just (Token flagName val) -> case p val of
+			Left err -> ParserM (\_ -> Left ("Value for flag " ++ flagName ++ " is invalid: " ++ err))
+			Right a -> return a
+		Just (TokenUnary flagName) -> case p "true" of
 			Left err -> ParserM (\_ -> Left ("Value for flag " ++ flagName ++ " is invalid: " ++ err))
 			Right a -> return a
 
@@ -527,13 +531,10 @@ newtype ImportedOptions a = ImportedOptions (OptionsMeta a)
 importedOptions :: Options a => ImportedOptions a
 importedOptions = ImportedOptions optionsMeta
 
-castTokens :: TokensFor a -> TokensFor b
-castTokens (TokensFor tokens args) = TokensFor tokens args
-
 parseSubOptions :: Options a => ParserM optType a
 parseSubOptions = do
 	tokens <- ParserM (\t -> Right t)
-	case optionsParse' (castTokens tokens) of
+	case optionsParse' tokens of
 		Left err -> ParserM (\_ -> Left err)
 		Right x -> return x
 
@@ -793,16 +794,17 @@ parsedHelp = parsedHelp_
 --                exitSuccess
 -- @
 parseOptions :: Options opts => [String] -> ParsedOptions opts
-parseOptions argv = parsed where
-	defs = addHelpFlags optionsDefs
-	help flag = helpFor flag defs Nothing
-	parsed = case tokenize defs argv of
-		(_, Left err) -> ParsedOptions Nothing (Just err) (help HelpSummary) []
+parseOptions argv = parsed (addHelpFlags optionsDefs) optionsParse where
+	help defs flag = helpFor flag defs Nothing
+	
+	parsed :: OptionDefinitions opts -> (Tokens -> Either String (opts, [String])) -> ParsedOptions opts
+	parsed defs parse = case tokenize defs argv of
+		(_, Left err) -> ParsedOptions Nothing (Just err) (help defs HelpSummary) []
 		(_, Right tokens) -> case checkHelpFlag tokens of
-			Just helpFlag -> ParsedOptions Nothing Nothing (help helpFlag) []
-			Nothing -> case optionsParse tokens of
-				Left err -> ParsedOptions Nothing (Just err) (help HelpSummary) []
-				Right (opts, args) -> ParsedOptions (Just opts) Nothing (help HelpSummary) args
+			Just helpFlag -> ParsedOptions Nothing Nothing (help defs helpFlag) []
+			Nothing -> case parse tokens of
+				Left err -> ParsedOptions Nothing (Just err) (help defs HelpSummary) []
+				Right (opts, args) -> ParsedOptions (Just opts) Nothing (help defs HelpSummary) args
 
 -- | Retrieve 'System.Environment.getArgs', and attempt to parse it into a
 -- valid value of an 'Options' type plus a list of left-over arguments. The
@@ -831,7 +833,7 @@ runCommand io = do
 				hPutStr stdout (parsedHelp parsed)
 				exitSuccess
 
-data Subcommand cmdOpts action = Subcommand String [OptionInfo] (TokensFor cmdOpts -> Either String action)
+data Subcommand cmdOpts action = Subcommand String [OptionInfo] (Tokens -> Either String action)
 
 subcommand :: (Options cmdOpts, Options subcmdOpts)
            => String -- ^ The subcommand name.
@@ -845,7 +847,7 @@ subcommand name fn = Subcommand name opts checkTokens where
 	
 	checkTokens tokens = case optionsParse' tokens of
 		Left err -> Left err
-		Right cmdOpts -> case optionsParse (castTokens tokens) of
+		Right cmdOpts -> case optionsParse tokens of
 			Left err -> Left err
 			Right (subcmdOpts, args) -> Right (fn cmdOpts subcmdOpts args)
 
@@ -856,7 +858,7 @@ addSubcommands :: [Subcommand cmdOpts action] -> OptionDefinitions cmdOpts -> Op
 addSubcommands subcommands defs = case defs of
 	OptionDefinitions mainOpts subcmdOpts -> OptionDefinitions mainOpts (subcmdOpts ++ map subcommandInfo subcommands)
 
-findSubcmd :: [Subcommand cmdOpts action] -> String -> TokensFor cmdOpts -> Either String action
+findSubcmd :: [Subcommand cmdOpts action] -> String -> Tokens -> Either String action
 findSubcmd subcommands name tokens = subcmd where
 	asoc = [(n, cmd) | cmd@(Subcommand n _ _) <- subcommands]
 	subcmd = case lookup name asoc of

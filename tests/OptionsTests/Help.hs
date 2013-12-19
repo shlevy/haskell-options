@@ -8,6 +8,7 @@ module OptionsTests.Help
 	( suite_Help
 	) where
 
+import qualified Data.Map as Map
 import           Test.Chell
 
 import           Options.Types
@@ -43,7 +44,7 @@ groupInfoHelp = Just (GroupInfo
 
 infoHelpSummary :: [Char] -> [String] -> OptionInfo
 infoHelpSummary shorts longs = OptionInfo
-	{ optionInfoKey = "main:Options.Help:optHelpSummary"
+	{ optionInfoKey = OptionKeyHelpSummary
 	, optionInfoShortFlags = shorts
 	, optionInfoLongFlags = longs
 	, optionInfoDefault = "false"
@@ -54,7 +55,7 @@ infoHelpSummary shorts longs = OptionInfo
 
 infoHelpAll :: OptionInfo
 infoHelpAll = OptionInfo
-	{ optionInfoKey = "main:Options.Help:optHelpGroup:all"
+	{ optionInfoKey = OptionKeyHelpGroup "all"
 	, optionInfoShortFlags = []
 	, optionInfoLongFlags = ["help-all"]
 	, optionInfoDefault = "false"
@@ -66,7 +67,7 @@ infoHelpAll = OptionInfo
 test_AddHelpFlags_None :: Test
 test_AddHelpFlags_None = assertions "none" $ do
 	let commandDefs = OptionDefinitions
-		[ OptionInfo "test.help" ['h'] ["help"] "default" False "" Nothing
+		[ OptionInfo (OptionKey "test.help") ['h'] ["help"] "default" False "" Nothing
 		]
 		[]
 	let helpAdded = addHelpFlags commandDefs
@@ -74,14 +75,14 @@ test_AddHelpFlags_None = assertions "none" $ do
 	
 	$expect (equal opts
 		[ infoHelpAll
-		, OptionInfo "test.help" ['h'] ["help"] "default" False "" Nothing
+		, OptionInfo (OptionKey "test.help") ['h'] ["help"] "default" False "" Nothing
 		])
 	$expect (equal subcmds [])
 
 test_AddHelpFlags_Short :: Test
 test_AddHelpFlags_Short = assertions "short" $ do
 	let commandDefs = OptionDefinitions
-		[ OptionInfo "test.help" [] ["help"] "default" False "" Nothing
+		[ OptionInfo (OptionKey "test.help") [] ["help"] "default" False "" Nothing
 		]
 		[]
 	let helpAdded = addHelpFlags commandDefs
@@ -90,14 +91,14 @@ test_AddHelpFlags_Short = assertions "short" $ do
 	$expect (equal opts
 		[ infoHelpSummary ['h'] []
 		, infoHelpAll
-		, OptionInfo "test.help" [] ["help"] "default" False "" Nothing
+		, OptionInfo (OptionKey "test.help") [] ["help"] "default" False "" Nothing
 		])
 	$expect (equal subcmds [])
 
 test_AddHelpFlags_Long :: Test
 test_AddHelpFlags_Long = assertions "long" $ do
 	let commandDefs = OptionDefinitions
-		[ OptionInfo "test.help" ['h'] [] "default" False "" Nothing
+		[ OptionInfo (OptionKey "test.help") ['h'] [] "default" False "" Nothing
 		]
 		[]
 	let helpAdded = addHelpFlags commandDefs
@@ -106,7 +107,7 @@ test_AddHelpFlags_Long = assertions "long" $ do
 	$expect (equal opts
 		[ infoHelpSummary [] ["help"]
 		, infoHelpAll
-		, OptionInfo "test.help" ['h'] [] "default" False "" Nothing
+		, OptionInfo (OptionKey "test.help") ['h'] [] "default" False "" Nothing
 		])
 	$expect (equal subcmds [])
 
@@ -125,25 +126,25 @@ test_AddHelpFlags_Both = assertions "both" $ do
 test_AddHelpFlags_NoAll :: Test
 test_AddHelpFlags_NoAll = assertions "no-all" $ do
 	let commandDefs = OptionDefinitions
-		[ OptionInfo "test.help" ['h'] ["help", "help-all"] "default" False "" Nothing
+		[ OptionInfo (OptionKey "test.help") ['h'] ["help", "help-all"] "default" False "" Nothing
 		]
 		[]
 	let helpAdded = addHelpFlags commandDefs
 	let OptionDefinitions opts subcmds = helpAdded
 	
 	$expect (equal opts
-		[ OptionInfo "test.help" ['h'] ["help", "help-all"] "default" False "" Nothing
+		[ OptionInfo (OptionKey "test.help") ['h'] ["help", "help-all"] "default" False "" Nothing
 		])
 	$expect (equal subcmds [])
 
 test_AddHelpFlags_Subcommand :: Test
 test_AddHelpFlags_Subcommand = assertions "subcommand" $ do
-	let cmd1_a = OptionInfo "test.cmd1.a" ['a'] [] "" False "" (Just GroupInfo
+	let cmd1_a = OptionInfo (OptionKey "test.cmd1.a") ['a'] [] "" False "" (Just GroupInfo
 		{ groupInfoName = "foo"
 		, groupInfoTitle = "Foo Options"
 		, groupInfoDescription = "More Foo Options"
 		})
-	let cmd1_b = OptionInfo "test.cmd1.b" ['b'] [] "" False "" (Just GroupInfo
+	let cmd1_b = OptionInfo (OptionKey "test.cmd1.b") ['b'] [] "" False "" (Just GroupInfo
 		{ groupInfoName = "all"
 		, groupInfoTitle = "All Options"
 		, groupInfoDescription = "More All Options"
@@ -155,7 +156,7 @@ test_AddHelpFlags_Subcommand = assertions "subcommand" $ do
 	let OptionDefinitions opts subcmds = helpAdded
 	
 	let helpFoo = OptionInfo
-		{ optionInfoKey = "main:Options.Help:optHelpGroup:foo"
+		{ optionInfoKey = OptionKeyHelpGroup "foo"
 		, optionInfoShortFlags = []
 		, optionInfoLongFlags = ["help-foo"]
 		, optionInfoDefault = "false"
@@ -176,31 +177,31 @@ test_AddHelpFlags_Subcommand = assertions "subcommand" $ do
 
 test_CheckHelpFlag :: Test
 test_CheckHelpFlag = assertions "checkHelpFlag" $ do
-	let checkFlag keys = equal (checkHelpFlag (TokensFor [(k, ("-h", "true")) | k <- keys] []))
+	let checkFlag keys = equal (checkHelpFlag (Tokens (Map.fromList [(k, TokenUnary "-h") | k <- keys]) []))
 	
 	$expect (checkFlag [] Nothing)
-	$expect (checkFlag ["main:Options.Help:optHelpSummary"] (Just HelpSummary))
-	$expect (checkFlag ["main:Options.Help:optHelpGroup:all"] (Just HelpAll))
-	$expect (checkFlag ["main:Options.Help:optHelpGroup:foo"] (Just (HelpGroup "foo")))
+	$expect (checkFlag [OptionKeyHelpSummary] (Just HelpSummary))
+	$expect (checkFlag [OptionKeyHelpGroup "all"] (Just HelpAll))
+	$expect (checkFlag [OptionKeyHelpGroup"foo"] (Just (HelpGroup "foo")))
 
 variedOptions :: OptionDefinitions ()
 variedOptions = addHelpFlags $ OptionDefinitions
-	[ OptionInfo "test.a" ['a'] ["long-a"] "def" False "a description here" Nothing
-	, OptionInfo "test.long1" [] ["a-looooooooooooong-option"] "def" False "description here" Nothing
-	, OptionInfo "test.long2" [] ["a-loooooooooooooong-option"] "def" False "description here" Nothing
-	, OptionInfo "test.b" ['b'] ["long-b"] "def" False "b description here" Nothing
-	, OptionInfo "test.g" ['g'] ["long-g"] "def" False "g description here" (Just GroupInfo
+	[ OptionInfo (OptionKey "test.a") ['a'] ["long-a"] "def" False "a description here" Nothing
+	, OptionInfo (OptionKey "test.long1") [] ["a-looooooooooooong-option"] "def" False "description here" Nothing
+	, OptionInfo (OptionKey "test.long2") [] ["a-loooooooooooooong-option"] "def" False "description here" Nothing
+	, OptionInfo (OptionKey "test.b") ['b'] ["long-b"] "def" False "b description here" Nothing
+	, OptionInfo (OptionKey "test.g") ['g'] ["long-g"] "def" False "g description here" (Just GroupInfo
 		{ groupInfoName = "group"
 		, groupInfoTitle = "Grouped options"
 		, groupInfoDescription = "Show grouped options."
 		})
 	]
 	[ ("cmd1",
-		[ OptionInfo "test.cmd1.z" ['z'] ["long-z"] "def" False "z description here" Nothing
+		[ OptionInfo (OptionKey "test.cmd1.z") ['z'] ["long-z"] "def" False "z description here" Nothing
 		])
 	, ("cmd2",
-		[ OptionInfo "test.cmd2.y" ['y'] ["long-y"] "def" False "y description here" Nothing
-		, OptionInfo "test.cmd2.g2" [] ["long-g2"] "def" False "g2 description here" (Just GroupInfo
+		[ OptionInfo (OptionKey "test.cmd2.y") ['y'] ["long-y"] "def" False "y description here" Nothing
+		, OptionInfo (OptionKey "test.cmd2.g2") [] ["long-g2"] "def" False "g2 description here" (Just GroupInfo
 			{ groupInfoName = "group"
 			, groupInfoTitle = "Grouped options"
 			, groupInfoDescription = "Show grouped options."

@@ -9,6 +9,7 @@ module OptionsTests.Tokenize
 	( suite_Tokenize
 	) where
 
+import qualified Data.Map as Map
 import           Test.Chell
 
 import           Options.Types
@@ -35,34 +36,34 @@ suite_Tokenize = suite "tokenize"
 
 commandDefs :: OptionDefinitions ()
 commandDefs = OptionDefinitions
-	[ OptionInfo "test.a" ['a'] ["long-a"] "default" False "" Nothing
-	, OptionInfo "test.x" ['x'] ["long-x"] "default" True "" Nothing
-	, OptionInfo "test.y" ['y'] ["long-y"] "default" True "" Nothing
-	, OptionInfo "test.z" ['z'] ["long-z"] "default" True "" Nothing
+	[ OptionInfo (OptionKey "test.a") ['a'] ["long-a"] "default" False "" Nothing
+	, OptionInfo (OptionKey "test.x") ['x'] ["long-x"] "default" True "" Nothing
+	, OptionInfo (OptionKey "test.y") ['y'] ["long-y"] "default" True "" Nothing
+	, OptionInfo (OptionKey "test.z") ['z'] ["long-z"] "default" True "" Nothing
 	]
 	[]
 
 subcommandDefs :: OptionDefinitions ()
 subcommandDefs = OptionDefinitions
-	[ OptionInfo "test.a" ['a'] ["long-a"] "default" False "" Nothing
-	, OptionInfo "test.b" ['b'] ["long-b"] "default" False "" Nothing
-	, OptionInfo "test.x" ['x'] ["long-x"] "default" True "" Nothing
-	, OptionInfo "test.y" ['y'] ["long-y"] "default" True "" Nothing
-	, OptionInfo "test.z" ['z'] ["long-z"] "default" True "" Nothing
+	[ OptionInfo (OptionKey "test.a") ['a'] ["long-a"] "default" False "" Nothing
+	, OptionInfo (OptionKey "test.b") ['b'] ["long-b"] "default" False "" Nothing
+	, OptionInfo (OptionKey "test.x") ['x'] ["long-x"] "default" True "" Nothing
+	, OptionInfo (OptionKey "test.y") ['y'] ["long-y"] "default" True "" Nothing
+	, OptionInfo (OptionKey "test.z") ['z'] ["long-z"] "default" True "" Nothing
 	]
 	[ ("sub1",
-		[ OptionInfo "sub.d" ['d'] ["long-d"] "default" False "" Nothing
-		, OptionInfo "sub.e" ['e'] ["long-e"] "default" True "" Nothing
+		[ OptionInfo (OptionKey "sub.d") ['d'] ["long-d"] "default" False "" Nothing
+		, OptionInfo (OptionKey "sub.e") ['e'] ["long-e"] "default" True "" Nothing
 		])
 	, ("sub2",
-		[ OptionInfo "sub.d" ['d'] ["long-d"] "default" True "" Nothing
-		, OptionInfo "sub.e" ['e'] ["long-e"] "default" True "" Nothing
+		[ OptionInfo (OptionKey "sub.d") ['d'] ["long-d"] "default" True "" Nothing
+		, OptionInfo (OptionKey "sub.e") ['e'] ["long-e"] "default" True "" Nothing
 		])
 	]
 
 unicodeDefs :: OptionDefinitions ()
 unicodeDefs = OptionDefinitions
-	[ OptionInfo "test.a" ['\12354'] ["long-\12354"] "default" False "" Nothing
+	[ OptionInfo (OptionKey "test.a") ['\12354'] ["long-\12354"] "default" False "" Nothing
 	]
 	[]
 
@@ -72,8 +73,8 @@ test_Empty = assertions "empty" $ do
 	$expect (equal Nothing subcmd)
 	$assert (right eTokens)
 	
-	let Right (TokensFor tokens args) = eTokens
-	$expect (equal [] tokens)
+	let Right (Tokens tokens args) = eTokens
+	$expect (equalTokens [] tokens)
 	$expect (equal [] args)
 
 test_NoFlag :: Test
@@ -82,8 +83,8 @@ test_NoFlag = assertions "no-flag" $ do
 	$expect (equal Nothing subcmd)
 	$assert (right eTokens)
 	
-	let Right (TokensFor tokens args) = eTokens
-	$expect (equal [] tokens)
+	let Right (Tokens tokens args) = eTokens
+	$expect (equalTokens [] tokens)
 	$expect (equal ["-", "foo", "bar"] args)
 
 test_ShortFlag :: Test
@@ -93,16 +94,16 @@ test_ShortFlag = assertions "short-flag" $ do
 		$expect (equal Nothing subcmd)
 		$assert (right eTokens)
 		
-		let Right (TokensFor tokens args) = eTokens
-		$expect (equal [("test.a", ("-a", "foo"))] tokens)
+		let Right (Tokens tokens args) = eTokens
+		$expect (equalTokens [("test.a", Token "-a" "foo")] tokens)
 		$expect (equal ["bar"] args)
 	do
 		let (subcmd, eTokens) = tokenize commandDefs ["-afoo", "bar"]
 		$expect (equal Nothing subcmd)
 		$assert (right eTokens)
 		
-		let Right (TokensFor tokens args) = eTokens
-		$expect (equal [("test.a", ("-a", "foo"))] tokens)
+		let Right (Tokens tokens args) = eTokens
+		$expect (equalTokens [("test.a", Token "-a" "foo")] tokens)
 		$expect (equal ["bar"] args)
 
 test_ShortFlagUnknown :: Test
@@ -130,16 +131,16 @@ test_ShortFlagUnary = assertions "short-flag-unary" $ do
 		$expect (equal Nothing subcmd)
 		$assert (right eTokens)
 		
-		let Right (TokensFor tokens args) = eTokens
-		$expect (equal [("test.x", ("-x", "true"))] tokens)
+		let Right (Tokens tokens args) = eTokens
+		$expect (equalTokens [("test.x", TokenUnary "-x")] tokens)
 		$expect (equal ["foo", "bar"] args)
 	do
 		let (subcmd, eTokens) = tokenize commandDefs ["-xy", "foo", "bar"]
 		$expect (equal Nothing subcmd)
 		$assert (right eTokens)
 		
-		let Right (TokensFor tokens args) = eTokens
-		$expect (equal [("test.x", ("-x", "true")), ("test.y", ("-y", "true"))] tokens)
+		let Right (Tokens tokens args) = eTokens
+		$expect (equalTokens [("test.x", TokenUnary "-x"), ("test.y", TokenUnary "-y")] tokens)
 		$expect (equal ["foo", "bar"] args)
 
 test_ShortFlagDuplicate :: Test
@@ -173,16 +174,16 @@ test_LongFlag = assertions "long-flag" $ do
 		$expect (equal Nothing subcmd)
 		$assert (right eTokens)
 		
-		let Right (TokensFor tokens args) = eTokens
-		$expect (equal [("test.a", ("--long-a", "foo"))] tokens)
+		let Right (Tokens tokens args) = eTokens
+		$expect (equalTokens [("test.a", Token "--long-a" "foo")] tokens)
 		$expect (equal ["bar"] args)
 	do
 		let (subcmd, eTokens) = tokenize commandDefs ["--long-a=foo", "bar"]
 		$expect (equal Nothing subcmd)
 		$assert (right eTokens)
 		
-		let Right (TokensFor tokens args) = eTokens
-		$expect (equal [("test.a", ("--long-a", "foo"))] tokens)
+		let Right (Tokens tokens args) = eTokens
+		$expect (equalTokens [("test.a", Token "--long-a" "foo")] tokens)
 		$expect (equal ["bar"] args)
 
 test_LongFlagUnknown :: Test
@@ -218,16 +219,16 @@ test_LongFlagUnary = assertions "long-flag-unary" $ do
 		$expect (equal Nothing subcmd)
 		$assert (right eTokens)
 		
-		let Right (TokensFor tokens args) = eTokens
-		$expect (equal [("test.x", ("--long-x", "true"))] tokens)
+		let Right (Tokens tokens args) = eTokens
+		$expect (equalTokens [("test.x", TokenUnary "--long-x")] tokens)
 		$expect (equal ["foo", "bar"] args)
 	do
 		let (subcmd, eTokens) = tokenize commandDefs ["--long-x=foo", "bar"]
 		$expect (equal Nothing subcmd)
 		$assert (right eTokens)
 		
-		let Right (TokensFor tokens args) = eTokens
-		$expect (equal [("test.x", ("--long-x", "foo"))] tokens)
+		let Right (Tokens tokens args) = eTokens
+		$expect (equalTokens [("test.x", Token "--long-x" "foo")] tokens)
 		$expect (equal ["bar"] args)
 
 test_LongFlagDuplicate :: Test
@@ -260,8 +261,8 @@ test_EndFlags = assertions "end-flags" $ do
 	$expect (equal Nothing subcmd)
 	$assert (right eTokens)
 	
-	let Right (TokensFor tokens args) = eTokens
-	$expect (equal [] tokens)
+	let Right (Tokens tokens args) = eTokens
+	$expect (equalTokens [] tokens)
 	$expect (equal ["foo", "-a", "bar"] args)
 
 test_Subcommand :: Test
@@ -271,16 +272,16 @@ test_Subcommand = assertions "subcommand" $ do
 		$expect (equal (Just "sub1") subcmd)
 		$assert (right eTokens)
 		
-		let Right (TokensFor tokens args) = eTokens
-		$expect (equal [("test.x", ("-x", "true")), ("sub.d", ("-d", "foo")), ("sub.e", ("--long-e", "true"))] tokens)
+		let Right (Tokens tokens args) = eTokens
+		$expect (equalTokens [("test.x", TokenUnary "-x"), ("sub.d", Token "-d" "foo"), ("sub.e", TokenUnary "--long-e")] tokens)
 		$expect (equal ["bar"] args)
 	do
 		let (subcmd, eTokens) = tokenize subcommandDefs ["-x", "sub2", "-d", "foo", "--long-e", "bar"]
 		$expect (equal (Just "sub2") subcmd)
 		$assert (right eTokens)
 		
-		let Right (TokensFor tokens args) = eTokens
-		$expect (equal [("test.x", ("-x", "true")), ("sub.d", ("-d", "true")), ("sub.e", ("--long-e", "true"))] tokens)
+		let Right (Tokens tokens args) = eTokens
+		$expect (equalTokens [("test.x", TokenUnary "-x"), ("sub.d", TokenUnary "-d"), ("sub.e", TokenUnary "--long-e")] tokens)
 		$expect (equal ["foo", "bar"] args)
 
 test_SubcommandUnknown:: Test
@@ -309,14 +310,17 @@ test_Unicode = assertions "unicode" $ do
 			Right _ -> return ()
 		$assert (right eTokens)
 		
-		let Right (TokensFor tokens args) = eTokens
-		$expect (equal [("test.a", ("-\12354", "foo"))] tokens)
+		let Right (Tokens tokens args) = eTokens
+		$expect (equalTokens [("test.a", Token "-\12354" "foo")] tokens)
 		$expect (equal ["bar"] args)
 	do
 		let (subcmd, eTokens) = tokenize unicodeDefs longArgs
 		$expect (equal Nothing subcmd)
 		$assert (right eTokens)
 		
-		let Right (TokensFor tokens args) = eTokens
-		$expect (equal [("test.a", ("--long-\12354", "foo"))] tokens)
+		let Right (Tokens tokens args) = eTokens
+		$expect (equalTokens [("test.a", Token "--long-\12354" "foo")] tokens)
 		$expect (equal ["bar"] args)
+
+equalTokens :: [(String, Token)] -> Map.Map OptionKey Token -> Assertion
+equalTokens tokens = equal (Map.fromList [(OptionKey k, t) | (k, t) <- tokens])

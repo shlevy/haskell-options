@@ -1,5 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 -- |
 -- Module: Options.Help
 -- License: MIT
@@ -11,12 +9,10 @@ module Options.Help
 	) where
 
 import           Control.Monad.Writer
-import           Data.List (intercalate, partition, stripPrefix)
-import           Data.Maybe (isNothing, listToMaybe, maybeToList)
+import           Data.List (intercalate, partition)
+import           Data.Maybe (isNothing, listToMaybe)
 import qualified Data.Set as Set
 import qualified Data.Map as Map
-
-import           Language.Haskell.TH (location, loc_package, loc_module)
 
 import           Options.Types
 
@@ -41,7 +37,7 @@ addHelpFlags (OptionDefinitions opts subcmds) = OptionDefinitions withHelp subcm
 		}
 	
 	optSummary = OptionInfo
-		{ optionInfoKey = keyFor "optHelpSummary"
+		{ optionInfoKey = OptionKeyHelpSummary
 		, optionInfoShortFlags = []
 		, optionInfoLongFlags = []
 		, optionInfoDefault = "false"
@@ -51,7 +47,7 @@ addHelpFlags (OptionDefinitions opts subcmds) = OptionDefinitions withHelp subcm
 		}
 	
 	optGroupHelp group flag = OptionInfo
-		{ optionInfoKey = keyFor "optHelpGroup" ++ ":" ++ groupInfoName group
+		{ optionInfoKey = OptionKeyHelpGroup (groupInfoName group)
 		, optionInfoShortFlags = []
 		, optionInfoLongFlags = [flag]
 		, optionInfoDefault = "false"
@@ -100,21 +96,16 @@ addHelpFlags (OptionDefinitions opts subcmds) = OptionDefinitions withHelp subcm
 				else [optGroupHelp group flag]
 		return (subcmdName, newOpts ++ subcmdOpts)
 
-checkHelpFlag :: TokensFor a -> Maybe HelpFlag
-checkHelpFlag (TokensFor tokens _) = flag where
+checkHelpFlag :: Tokens -> Maybe HelpFlag
+checkHelpFlag tokens = flag where
 	flag = listToMaybe helpKeys
 	helpKeys = do
-		(k, _) <- tokens
-		if k == keySummary
-			then return HelpSummary
-			else if k == keyAll
-				then return HelpAll
-				else do
-					groupName <- maybeToList (stripPrefix keyGroupPrefix k)
-					return (HelpGroup groupName)
-	keySummary = keyFor "optHelpSummary"
-	keyAll = keyFor "optHelpGroup:all"
-	keyGroupPrefix = keyFor "optHelpGroup:"
+		k <- Map.keys (tokensMap tokens)
+		case k of
+			OptionKeyHelpSummary -> return HelpSummary
+			OptionKeyHelpGroup "all" -> return HelpAll
+			OptionKeyHelpGroup groupName -> return (HelpGroup groupName)
+			_ -> []
 
 helpFor :: HelpFlag -> OptionDefinitions a -> Maybe String -> String
 helpFor flag defs subcmd = case flag of
@@ -230,14 +221,6 @@ showHelpOneGroup (OptionDefinitions mainOpts subcmds) groupName subcmd = do
 	-- Always print --help group
 	let group = filter (\(g,_) -> groupInfoName g == groupName) groupInfos
 	forM_ group showHelpGroup
-
-keyFor :: String -> String
-keyFor fieldName = this_pkg ++ ":" ++ this_mod ++ ":" ++ fieldName where
-	(this_pkg, this_mod) = $(do
-		loc <- location
-		let pkg = loc_package loc
-		let mod' = loc_module loc
-		[| (pkg, mod') |])
 
 uniqueGroupInfos :: [OptionInfo] -> ([(GroupInfo, [OptionInfo])], [OptionInfo])
 uniqueGroupInfos allOptions = (Map.elems infoMap, ungroupedOptions) where
