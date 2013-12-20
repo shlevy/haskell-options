@@ -182,7 +182,7 @@ test_CheckHelpFlag = assertions "checkHelpFlag" $ do
 	$expect (checkFlag [] Nothing)
 	$expect (checkFlag [OptionKeyHelpSummary] (Just HelpSummary))
 	$expect (checkFlag [OptionKeyHelpGroup "all"] (Just HelpAll))
-	$expect (checkFlag [OptionKeyHelpGroup"foo"] (Just (HelpGroup "foo")))
+	$expect (checkFlag [OptionKeyHelpGroup "foo"] (Just (HelpGroup "foo")))
 
 variedOptions :: OptionDefinitions ()
 variedOptions = addHelpFlags $ OptionDefinitions
