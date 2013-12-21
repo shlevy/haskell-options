@@ -17,6 +17,7 @@ import           Data.Word
 import           Test.Chell
 
 import           Options.OptionTypes
+import           Options.Types
 
 suite_OptionTypes :: Suite
 suite_OptionTypes = suite "option-types"

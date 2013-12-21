@@ -3,6 +3,7 @@
 -- License: MIT
 module Options.Types
 	( OptionDefinitions(..)
+	, OptionType(..)
 	, Group(..)
 	, OptionKey(..)
 	, Location(..)
@@ -13,8 +14,20 @@ module Options.Types
 	) where
 
 import qualified Data.Map as Map
+import           Language.Haskell.TH (Exp, Q, Type)
 
 data OptionDefinitions a = OptionDefinitions [OptionInfo] [(String, [OptionInfo])]
+
+-- | An option's type determines how the option will be parsed, and which
+-- Haskell type the parsed value will be stored as. There are many types
+-- available, covering most basic types and a few more advanced types.
+data OptionType val = OptionType
+	{ optionTypeTemplateType :: Type
+	, optionTypeUnary :: Bool
+	, optionTypeParse :: String -> Either String val
+	, optionTypeTemplateParse :: Q Exp
+	, optionTypeName :: String
+	}
 
 data Group = Group
 	{
