@@ -91,30 +91,30 @@ module Options
 	-- ** Option types
 	, OptionType
 	
-	, optionTypeBool
+	, optionType_bool
 	
-	, optionTypeString
+	, optionType_string
 	
-	, optionTypeInt
-	, optionTypeInt8
-	, optionTypeInt16
-	, optionTypeInt32
-	, optionTypeInt64
-	, optionTypeWord
-	, optionTypeWord8
-	, optionTypeWord16
-	, optionTypeWord32
-	, optionTypeWord64
-	, optionTypeInteger
+	, optionType_int
+	, optionType_int8
+	, optionType_int16
+	, optionType_int32
+	, optionType_int64
+	, optionType_word
+	, optionType_word8
+	, optionType_word16
+	, optionType_word32
+	, optionType_word64
+	, optionType_integer
 	
-	, optionTypeFloat
-	, optionTypeDouble
+	, optionType_float
+	, optionType_double
 	
-	, optionTypeMaybe
-	, optionTypeList
-	, optionTypeSet
-	, optionTypeMap
-	, optionTypeEnum
+	, optionType_maybe
+	, optionType_list
+	, optionType_set
+	, optionType_map
+	, optionType_enum
 	
 	-- * Option groups
 	, Group
@@ -318,7 +318,7 @@ putOptionDecl name qtype infoExp parseExp = OptionsM (modify (\st -> st
 --'option' \"optPort\" (\\o -> o
 --    { 'optionLongFlags' = [\"port\"]
 --    , 'optionDefault' = \"80\"
---    , 'optionType' = 'optionTypeWord16'
+--    , 'optionType' = 'optionType_word16'
 --    }
 -- @
 option :: String -- ^ Field name
@@ -334,7 +334,7 @@ option fieldName f = do
 		{ optionShortFlags = []
 		, optionLongFlags = []
 		, optionDefault = ""
-		, optionType = optionTypeString
+		, optionType = optionType_string
 		, optionDescription = ""
 		, optionGroup = emptyGroup
 		})
@@ -551,7 +551,7 @@ boolOption :: String -- ^ Field name
 boolOption name flag def desc = option name (\o -> o
 	{ optionLongFlags = [flag]
 	, optionDefault = if def then "true" else "false"
-	, optionType = optionTypeBool
+	, optionType = optionType_bool
 	, optionDescription = desc
 	})
 
@@ -578,7 +578,7 @@ stringsOption :: String -- ^ Field name
 stringsOption name flag def desc = option name (\o -> o
 	{ optionLongFlags = [flag]
 	, optionDefault = intercalate "," def
-	, optionType = optionTypeList ',' optionTypeString
+	, optionType = optionType_list ',' optionType_string
 	, optionDescription = desc
 	})
 
@@ -592,7 +592,7 @@ intOption :: String -- ^ Field name
 intOption name flag def desc = option name (\o -> o
 	{ optionLongFlags = [flag]
 	, optionDefault = show def
-	, optionType = optionTypeInt
+	, optionType = optionType_int
 	, optionDescription = desc
 	})
 
@@ -606,7 +606,7 @@ integerOption :: String -- ^ Field name
 integerOption name flag def desc = option name (\o -> o
 	{ optionLongFlags = [flag]
 	, optionDefault = show def
-	, optionType = optionTypeInteger
+	, optionType = optionType_integer
 	, optionDescription = desc
 	})
 
@@ -620,7 +620,7 @@ floatOption :: String -- ^ Field name
 floatOption name flag def desc = option name (\o -> o
 	{ optionLongFlags = [flag]
 	, optionDefault = show def
-	, optionType = optionTypeFloat
+	, optionType = optionType_float
 	, optionDescription = desc
 	})
 
@@ -634,7 +634,7 @@ doubleOption :: String -- ^ Field name
 doubleOption name flag def desc = option name (\o -> o
 	{ optionLongFlags = [flag]
 	, optionDefault = show def
-	, optionType = optionTypeDouble
+	, optionType = optionType_double
 	, optionDescription = desc
 	})
 

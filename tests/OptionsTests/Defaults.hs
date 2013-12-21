@@ -33,102 +33,102 @@ $(defineOptions "AllOptions" $ do
 	-- Explicitly typed option definitions
 	option "t_Bool" (\o -> o
 		{ optionLongFlags = ["t_bool"]
-		, optionType = optionTypeBool
+		, optionType = optionType_bool
 		, optionDefault = "true"
 		})
 	option "t_String" (\o -> o
 		{ optionLongFlags = ["t_String"]
-		, optionType = optionTypeString
+		, optionType = optionType_string
 		, optionDefault = "abc"
 		})
 	option "t_Int" (\o -> o
 		{ optionLongFlags = ["t_Int"]
-		, optionType = optionTypeInt
+		, optionType = optionType_int
 		, optionDefault = "123"
 		})
 	option "t_Int8" (\o -> o
 		{ optionLongFlags = ["t_Int8"]
-		, optionType = optionTypeInt8
+		, optionType = optionType_int8
 		, optionDefault = "123"
 		})
 	option "t_Int16" (\o -> o
 		{ optionLongFlags = ["t_Int16"]
-		, optionType = optionTypeInt16
+		, optionType = optionType_int16
 		, optionDefault = "123"
 		})
 	option "t_Int32" (\o -> o
 		{ optionLongFlags = ["t_Int32"]
-		, optionType = optionTypeInt32
+		, optionType = optionType_int32
 		, optionDefault = "123"
 		})
 	option "t_Int64" (\o -> o
 		{ optionLongFlags = ["t_Int64"]
-		, optionType = optionTypeInt64
+		, optionType = optionType_int64
 		, optionDefault = "123"
 		})
 	option "t_Word" (\o -> o
 		{ optionLongFlags = ["t_Word"]
-		, optionType = optionTypeWord
+		, optionType = optionType_word
 		, optionDefault = "123"
 		})
 	option "t_Word8" (\o -> o
 		{ optionLongFlags = ["t_Word8"]
-		, optionType = optionTypeWord8
+		, optionType = optionType_word8
 		, optionDefault = "123"
 		})
 	option "t_Word16" (\o -> o
 		{ optionLongFlags = ["t_Word16"]
-		, optionType = optionTypeWord16
+		, optionType = optionType_word16
 		, optionDefault = "123"
 		})
 	option "t_Word32" (\o -> o
 		{ optionLongFlags = ["t_Word32"]
-		, optionType = optionTypeWord32
+		, optionType = optionType_word32
 		, optionDefault = "123"
 		})
 	option "t_Word64" (\o -> o
 		{ optionLongFlags = ["t_Word64"]
-		, optionType = optionTypeWord64
+		, optionType = optionType_word64
 		, optionDefault = "123"
 		})
 	option "t_Integer" (\o -> o
 		{ optionLongFlags = ["t_Integer"]
-		, optionType = optionTypeInteger
+		, optionType = optionType_integer
 		, optionDefault = "123"
 		})
 	option "t_Float" (\o -> o
 		{ optionLongFlags = ["t_Float"]
-		, optionType = optionTypeFloat
+		, optionType = optionType_float
 		, optionDefault = "123.5"
 		})
 	option "t_Double" (\o -> o
 		{ optionLongFlags = ["t_Double"]
-		, optionType = optionTypeDouble
+		, optionType = optionType_double
 		, optionDefault = "123.5"
 		})
 	option "t_Maybe" (\o -> o
 		{ optionLongFlags = ["t_Maybe"]
-		, optionType = optionTypeMaybe optionTypeBool
+		, optionType = optionType_maybe optionType_bool
 		, optionDefault = "true"
 		})
 	option "t_List" (\o -> o
 		{ optionLongFlags = ["t_List"]
-		, optionType = optionTypeList ',' optionTypeBool
+		, optionType = optionType_list ',' optionType_bool
 		, optionDefault = "true,false"
 		})
 	option "t_Set" (\o -> o
 		{ optionLongFlags = ["t_Set"]
-		, optionType = optionTypeSet ',' optionTypeBool
+		, optionType = optionType_set ',' optionType_bool
 		, optionDefault = "true,false"
 		})
 	option "t_Map" (\o -> o
 		{ optionLongFlags = ["t_Map"]
-		, optionType = optionTypeMap ',' '=' optionTypeString optionTypeBool
+		, optionType = optionType_map ',' '=' optionType_string optionType_bool
 		, optionDefault = "true=true,false=false"
 		})
 	option "t_Enum" (\o -> o
 		{ optionLongFlags = ["t_Enum"]
-		, optionType = optionTypeEnum ''Bool
+		, optionType = optionType_enum ''Bool
 			[ ("true", True)
 			, ("false", False)
 			]

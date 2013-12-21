@@ -49,14 +49,14 @@ parseInvalid t s err = equal (optionTypeParse t s) (Left err)
 
 test_Bool :: Test
 test_Bool = assertions "bool" $ do
-	$expect (parseValid optionTypeBool "true" True)
-	$expect (parseValid optionTypeBool "false" False)
-	$expect (parseInvalid optionTypeBool "" "\"\" is not in {\"true\", \"false\"}.")
+	$expect (parseValid optionType_bool "true" True)
+	$expect (parseValid optionType_bool "false" False)
+	$expect (parseInvalid optionType_bool "" "\"\" is not in {\"true\", \"false\"}.")
 
 test_String :: Test
 test_String = assertions "string" $ do
-	let valid = parseValid optionTypeString
-	let invalid = parseInvalid optionTypeString
+	let valid = parseValid optionType_string
+	let invalid = parseInvalid optionType_string
 	
 	$expect (valid "" "")
 	$expect (valid "a" "a")
@@ -66,8 +66,8 @@ test_String = assertions "string" $ do
 
 test_Int :: Test
 test_Int = assertions "int" $ do
-	let valid = parseValid optionTypeInt
-	let invalid = parseInvalid optionTypeInt
+	let valid = parseValid optionType_int
+	let invalid = parseInvalid optionType_int
 	
 	$expect (valid "-1" (-1 :: Int))
 	$expect (valid "1" (1 :: Int))
@@ -84,8 +84,8 @@ test_Int = assertions "int" $ do
 
 test_Int8 :: Test
 test_Int8 = assertions "int8" $ do
-	let valid = parseValid optionTypeInt8
-	let invalid = parseInvalid optionTypeInt8
+	let valid = parseValid optionType_int8
+	let invalid = parseInvalid optionType_int8
 	
 	$expect (valid "-1" (-1 :: Int8))
 	$expect (valid "1" (1 :: Int8))
@@ -100,8 +100,8 @@ test_Int8 = assertions "int8" $ do
 
 test_Int16 :: Test
 test_Int16 = assertions "int16" $ do
-	let valid = parseValid optionTypeInt16
-	let invalid = parseInvalid optionTypeInt16
+	let valid = parseValid optionType_int16
+	let invalid = parseInvalid optionType_int16
 	
 	$expect (valid "-1" (-1 :: Int16))
 	$expect (valid "1" (1 :: Int16))
@@ -116,8 +116,8 @@ test_Int16 = assertions "int16" $ do
 
 test_Int32 :: Test
 test_Int32 = assertions "int32" $ do
-	let valid = parseValid optionTypeInt32
-	let invalid = parseInvalid optionTypeInt32
+	let valid = parseValid optionType_int32
+	let invalid = parseInvalid optionType_int32
 	
 	$expect (valid "-1" (-1 :: Int32))
 	$expect (valid "1" (1 :: Int32))
@@ -132,8 +132,8 @@ test_Int32 = assertions "int32" $ do
 
 test_Int64 :: Test
 test_Int64 = assertions "int64" $ do
-	let valid = parseValid optionTypeInt64
-	let invalid = parseInvalid optionTypeInt64
+	let valid = parseValid optionType_int64
+	let invalid = parseInvalid optionType_int64
 	
 	$expect (valid "-1" (-1 :: Int64))
 	$expect (valid "1" (1 :: Int64))
@@ -148,11 +148,11 @@ test_Int64 = assertions "int64" $ do
 
 test_Word :: Test
 test_Word = assertions "word" $ do
-	let valid = parseValid optionTypeWord
-	let invalid = parseInvalid optionTypeWord
+	let valid = parseValid optionType_word
+	let invalid = parseInvalid optionType_word
 	
 	let pastMax = show (toInteger (maxBound :: Word) + 1)
-	let errBounds = " is not within bounds [0:" ++ show (maxBound :: Word) ++ "] of type word."
+	let errBounds = " is not within bounds [0:" ++ show (maxBound :: Word) ++ "] of type uint."
 	
 	$expect (invalid "-1" ("-1" ++ errBounds))
 	$expect (valid "0" (0 :: Word))
@@ -164,64 +164,64 @@ test_Word = assertions "word" $ do
 
 test_Word8 :: Test
 test_Word8 = assertions "word8" $ do
-	let valid = parseValid optionTypeWord8
-	let invalid = parseInvalid optionTypeWord8
+	let valid = parseValid optionType_word8
+	let invalid = parseInvalid optionType_word8
 	
-	$expect (invalid "-1" "-1 is not within bounds [0:255] of type word8.")
+	$expect (invalid "-1" "-1 is not within bounds [0:255] of type uint8.")
 	$expect (valid "0" (0 :: Word8))
 	$expect (valid "1" (1 :: Word8))
 	$expect (invalid "a" "\"a\" is not an integer.")
 	
 	let pastMax = show (toInteger (maxBound :: Word8) + 1)
 	$expect (valid (show (maxBound :: Word8)) maxBound)
-	$expect (invalid pastMax "256 is not within bounds [0:255] of type word8.")
+	$expect (invalid pastMax "256 is not within bounds [0:255] of type uint8.")
 
 test_Word16 :: Test
 test_Word16 = assertions "word16" $ do
-	let valid = parseValid optionTypeWord16
-	let invalid = parseInvalid optionTypeWord16
+	let valid = parseValid optionType_word16
+	let invalid = parseInvalid optionType_word16
 	
-	$expect (invalid "-1" "-1 is not within bounds [0:65535] of type word16.")
+	$expect (invalid "-1" "-1 is not within bounds [0:65535] of type uint16.")
 	$expect (valid "0" (0 :: Word16))
 	$expect (valid "1" (1 :: Word16))
 	$expect (invalid "a" "\"a\" is not an integer.")
 	
 	let pastMax = show (toInteger (maxBound :: Word16) + 1)
 	$expect (valid (show (maxBound :: Word16)) maxBound)
-	$expect (invalid pastMax "65536 is not within bounds [0:65535] of type word16.")
+	$expect (invalid pastMax "65536 is not within bounds [0:65535] of type uint16.")
 
 test_Word32 :: Test
 test_Word32 = assertions "word32" $ do
-	let valid = parseValid optionTypeWord32
-	let invalid = parseInvalid optionTypeWord32
+	let valid = parseValid optionType_word32
+	let invalid = parseInvalid optionType_word32
 	
-	$expect (invalid "-1" "-1 is not within bounds [0:4294967295] of type word32.")
+	$expect (invalid "-1" "-1 is not within bounds [0:4294967295] of type uint32.")
 	$expect (valid "0" (0 :: Word32))
 	$expect (valid "1" (1 :: Word32))
 	$expect (invalid "a" "\"a\" is not an integer.")
 	
 	let pastMax = show (toInteger (maxBound :: Word32) + 1)
 	$expect (valid (show (maxBound :: Word32)) maxBound)
-	$expect (invalid pastMax "4294967296 is not within bounds [0:4294967295] of type word32.")
+	$expect (invalid pastMax "4294967296 is not within bounds [0:4294967295] of type uint32.")
 
 test_Word64 :: Test
 test_Word64 = assertions "word64" $ do
-	let valid = parseValid optionTypeWord64
-	let invalid = parseInvalid optionTypeWord64
+	let valid = parseValid optionType_word64
+	let invalid = parseInvalid optionType_word64
 	
-	$expect (invalid "-1" "-1 is not within bounds [0:18446744073709551615] of type word64.")
+	$expect (invalid "-1" "-1 is not within bounds [0:18446744073709551615] of type uint64.")
 	$expect (valid "0" (0 :: Word64))
 	$expect (valid "1" (1 :: Word64))
 	$expect (invalid "a" "\"a\" is not an integer.")
 	
 	let pastMax = show (toInteger (maxBound :: Word64) + 1)
 	$expect (valid (show (maxBound :: Word64)) maxBound)
-	$expect (invalid pastMax "18446744073709551616 is not within bounds [0:18446744073709551615] of type word64.")
+	$expect (invalid pastMax "18446744073709551616 is not within bounds [0:18446744073709551615] of type uint64.")
 
 test_Integer :: Test
 test_Integer = assertions "integer" $ do
-	let valid = parseValid optionTypeInteger
-	let invalid = parseInvalid optionTypeInteger
+	let valid = parseValid optionType_integer
+	let invalid = parseInvalid optionType_integer
 	
 	$expect (invalid "" "\"\" is not an integer.")
 	$expect (valid "-1" (-1 :: Integer))
@@ -231,8 +231,8 @@ test_Integer = assertions "integer" $ do
 
 test_Float :: Test
 test_Float = assertions "float" $ do
-	let valid = parseValid optionTypeFloat
-	let invalid = parseInvalid optionTypeFloat
+	let valid = parseValid optionType_float
+	let invalid = parseInvalid optionType_float
 	
 	$expect (valid "-1" (-1 :: Float))
 	$expect (valid "0" (0 :: Float))
@@ -243,8 +243,8 @@ test_Float = assertions "float" $ do
 
 test_Double :: Test
 test_Double = assertions "double" $ do
-	let valid = parseValid optionTypeDouble
-	let invalid = parseInvalid optionTypeDouble
+	let valid = parseValid optionType_double
+	let invalid = parseInvalid optionType_double
 	
 	$expect (valid "-1" (-1 :: Double))
 	$expect (valid "0" (0 :: Double))
@@ -255,7 +255,7 @@ test_Double = assertions "double" $ do
 
 test_Maybe :: Test
 test_Maybe = assertions "maybe" $ do
-	let t = optionTypeMaybe optionTypeInt
+	let t = optionType_maybe optionType_int
 	let valid = parseValid t
 	let invalid = parseInvalid t
 	
@@ -265,7 +265,7 @@ test_Maybe = assertions "maybe" $ do
 
 test_List :: Test
 test_List = assertions "list" $ do
-	let t = optionTypeList ',' optionTypeInt
+	let t = optionType_list ',' optionType_int
 	let valid = parseValid t
 	let invalid = parseInvalid t
 	
@@ -277,7 +277,7 @@ test_List = assertions "list" $ do
 
 test_Set :: Test
 test_Set = assertions "set" $ do
-	let t = optionTypeSet ',' optionTypeInt
+	let t = optionType_set ',' optionType_int
 	let valid = parseValid t
 	let invalid = parseInvalid t
 	
@@ -289,7 +289,7 @@ test_Set = assertions "set" $ do
 
 test_Map :: Test
 test_Map = assertions "map" $ do
-	let t = optionTypeMap ',' '=' optionTypeInt optionTypeInt
+	let t = optionType_map ',' '=' optionType_int optionType_int
 	let valid = parseValid t
 	let invalid = parseInvalid t
 	
@@ -307,7 +307,7 @@ data TestEnum = Enum1 | Enum2 | Enum3
 
 test_Enum :: Test
 test_Enum = assertions "enum" $ do
-	let t = optionTypeEnum ''TestEnum
+	let t = optionType_enum ''TestEnum
 		[ ("e1", Enum1)
 		, ("e2", Enum2)
 		, ("e3", Enum3)

@@ -86,8 +86,8 @@ data OptionType val = OptionType
 --
 -- >$ ./app --quiet=true
 -- >$ ./app --quiet=false
-optionTypeBool :: OptionType Bool
-optionTypeBool = OptionType (ConT ''Bool) True parseBool [| parseBool |] "bool"
+optionType_bool :: OptionType Bool
+optionType_bool = OptionType (ConT ''Bool) True parseBool [| parseBool |] "bool"
 
 parseBool :: String -> Either String Bool
 parseBool s = case s of
@@ -99,8 +99,8 @@ parseBool s = case s of
 -- | Store an option value as a @'String'@. The value is decoded to Unicode
 -- first, if needed. The value may contain non-Unicode bytes, in which case
 -- they will be stored using GHC 7.4's encoding for mixed-use strings.
-optionTypeString :: OptionType String
-optionTypeString = OptionType (ConT ''String) False Right [| Right |] "text"
+optionType_string :: OptionType String
+optionType_string = OptionType (ConT ''String) False Right [| Right |] "text"
 
 parseInteger :: String -> Either String Integer
 parseInteger s = parsed where
@@ -136,72 +136,72 @@ optionTypeBoundedInt type_ tName = OptionType (ConT type_) False (parseBoundedIn
 
 -- | Store an option as an @'Int'@. The option value must be an integer /n/
 -- such that @'minBound' <= n <= 'maxBound'@.
-optionTypeInt :: OptionType Int
-optionTypeInt = optionTypeBoundedInt ''Int "int"
+optionType_int :: OptionType Int
+optionType_int = optionTypeBoundedInt ''Int "int"
 
 -- | Store an option as an @'Int8'@. The option value must be an integer /n/
 -- such that @'minBound' <= n <= 'maxBound'@.
-optionTypeInt8 :: OptionType Int8
-optionTypeInt8 = optionTypeBoundedInt ''Int8 "int8"
+optionType_int8 :: OptionType Int8
+optionType_int8 = optionTypeBoundedInt ''Int8 "int8"
 
 -- | Store an option as an @'Int16'@. The option value must be an integer /n/
 -- such that @'minBound' <= n <= 'maxBound'@.
-optionTypeInt16 :: OptionType Int16
-optionTypeInt16 = optionTypeBoundedInt ''Int16 "int16"
+optionType_int16 :: OptionType Int16
+optionType_int16 = optionTypeBoundedInt ''Int16 "int16"
 
 -- | Store an option as an @'Int32'@. The option value must be an integer /n/
 -- such that @'minBound' <= n <= 'maxBound'@.
-optionTypeInt32 :: OptionType Int32
-optionTypeInt32 = optionTypeBoundedInt ''Int32 "int32"
+optionType_int32 :: OptionType Int32
+optionType_int32 = optionTypeBoundedInt ''Int32 "int32"
 
 -- | Store an option as an @'Int64'@. The option value must be an integer /n/
 -- such that @'minBound' <= n <= 'maxBound'@.
-optionTypeInt64 :: OptionType Int64
-optionTypeInt64 = optionTypeBoundedInt ''Int64 "int64"
+optionType_int64 :: OptionType Int64
+optionType_int64 = optionTypeBoundedInt ''Int64 "int64"
 
 -- | Store an option as a @'Word'@. The option value must be a positive
 -- integer /n/ such that @0 <= n <= 'maxBound'@.
-optionTypeWord :: OptionType Word
-optionTypeWord = optionTypeBoundedInt ''Word "word"
+optionType_word :: OptionType Word
+optionType_word = optionTypeBoundedInt ''Word "uint"
 
 -- | Store an option as a @'Word8'@. The option value must be a positive
 -- integer /n/ such that @0 <= n <= 'maxBound'@.
-optionTypeWord8 :: OptionType Word8
-optionTypeWord8 = optionTypeBoundedInt ''Word8 "word8"
+optionType_word8 :: OptionType Word8
+optionType_word8 = optionTypeBoundedInt ''Word8 "uint8"
 
 -- | Store an option as a @'Word16'@. The option value must be a positive
 -- integer /n/ such that @0 <= n <= 'maxBound'@.
-optionTypeWord16 :: OptionType Word16
-optionTypeWord16 = optionTypeBoundedInt ''Word16 "word16"
+optionType_word16 :: OptionType Word16
+optionType_word16 = optionTypeBoundedInt ''Word16 "uint16"
 
 -- | Store an option as a @'Word32'@. The option value must be a positive
 -- integer /n/ such that @0 <= n <= 'maxBound'@.
-optionTypeWord32 :: OptionType Word32
-optionTypeWord32 = optionTypeBoundedInt ''Word32 "word32"
+optionType_word32 :: OptionType Word32
+optionType_word32 = optionTypeBoundedInt ''Word32 "uint32"
 
 -- | Store an option as a @'Word64'@. The option value must be a positive
 -- integer /n/ such that @0 <= n <= 'maxBound'@.
-optionTypeWord64 :: OptionType Word64
-optionTypeWord64 = optionTypeBoundedInt ''Word64 "word64"
+optionType_word64 :: OptionType Word64
+optionType_word64 = optionTypeBoundedInt ''Word64 "uint64"
 
 -- | Store an option as an @'Integer'@. The option value must be an integer.
 -- There is no minimum or maximum value.
-optionTypeInteger :: OptionType Integer
-optionTypeInteger = OptionType (ConT ''Integer) False parseInteger [| parseInteger |] "integer"
+optionType_integer :: OptionType Integer
+optionType_integer = OptionType (ConT ''Integer) False parseInteger [| parseInteger |] "integer"
 
 -- | Store an option as a @'Float'@. The option value must be a number. Due to
 -- the imprecision of floating-point math, the stored value might not exactly
 -- match the user's input. If the user's input is out of range for the
 -- @'Float'@ type, it will be stored as @Infinity@ or @-Infinity@.
-optionTypeFloat :: OptionType Float
-optionTypeFloat = OptionType (ConT ''Float) False parseFloat [| parseFloat |] "float32"
+optionType_float :: OptionType Float
+optionType_float = OptionType (ConT ''Float) False parseFloat [| parseFloat |] "float32"
 
 -- | Store an option as a @'Double'@. The option value must be a number. Due to
 -- the imprecision of floating-point math, the stored value might not exactly
 -- match the user's input. If the user's input is out of range for the
 -- @'Double'@ type, it will be stored as @Infinity@ or @-Infinity@.
-optionTypeDouble :: OptionType Double
-optionTypeDouble = OptionType (ConT ''Double) False parseFloat [| parseFloat |] "float64"
+optionType_double :: OptionType Double
+optionType_double = OptionType (ConT ''Double) False parseFloat [| parseFloat |] "float64"
 
 -- | Store an option as a @'Maybe'@ of another type. The value will be
 -- @Nothing@ if the option was not provided or is an empty string.
@@ -209,11 +209,11 @@ optionTypeDouble = OptionType (ConT ''Double) False parseFloat [| parseFloat |] 
 -- @
 --'option' \"optTimeout\" (\\o -> o
 --    { 'optionLongFlags' = [\"timeout\"]
---    , 'optionType' = 'optionTypeMaybe' 'optionTypeInt'
+--    , 'optionType' = 'optionType_maybe' 'optionType_int'
 --    })
 -- @
-optionTypeMaybe :: OptionType a -> OptionType (Maybe a)
-optionTypeMaybe (OptionType valType unary valParse valParseExp valTypeName) = OptionType (AppT (ConT ''Maybe) valType) unary
+optionType_maybe :: OptionType a -> OptionType (Maybe a)
+optionType_maybe (OptionType valType unary valParse valParseExp valTypeName) = OptionType (AppT (ConT ''Maybe) valType) unary
 	(parseMaybe valParse)
 	[| parseMaybe $valParseExp |]
 	("maybe<" ++ valTypeName ++ ">")
@@ -237,14 +237,14 @@ $([d| |])
 --'option' \"optNames\" (\\o -> o
 --    { 'optionLongFlags' = [\"names\"]
 --    , 'optionDefault' = \"Alice;Bob;Charles\"
---    , 'optionType' = 'optionTypeSet' \';\' 'optionTypeString'
+--    , 'optionType' = 'optionType_set' \';\' 'optionType_string'
 --    })
 -- @
-optionTypeSet :: Ord a
-              => Char -- ^ Element separator
-              -> OptionType a -- ^ Element type
-              -> OptionType (Set.Set a)
-optionTypeSet sep (OptionType valType _ valParse valParseExp valTypeName) = OptionType (AppT (ConT ''Set.Set) valType) False
+optionType_set :: Ord a
+               => Char -- ^ Element separator
+               -> OptionType a -- ^ Element type
+               -> OptionType (Set.Set a)
+optionType_set sep (OptionType valType _ valParse valParseExp valTypeName) = OptionType (AppT (ConT ''Set.Set) valType) False
 	(\s -> parseSet valParse (split sep s))
 	[| \s -> parseSet $valParseExp (split sep s) |]
 	("set<" ++ valTypeName ++ ">")
@@ -266,16 +266,16 @@ optionTypeSet sep (OptionType valType _ valParse valParseExp valTypeName) = Opti
 --'option' \"optNames\" (\\o -> o
 --    { 'optionLongFlags' = [\"names\"]
 --    , 'optionDefault' = \"name=Alice;hometown=Bucharest\"
---    , 'optionType' = 'optionTypeMap' \';\' \'=\' 'optionTypeString' 'optionTypeString'
+--    , 'optionType' = 'optionType_map' \';\' \'=\' 'optionType_string' 'optionType_string'
 --    })
 -- @
-optionTypeMap :: Ord k
-              => Char -- ^ Item separator
-              -> Char -- ^ Key/Value separator
-              -> OptionType k -- ^ Key type
-              -> OptionType v -- ^ Value type
-              -> OptionType (Map.Map k v)
-optionTypeMap itemSep keySep (OptionType keyType _ keyParse keyParseExp keyTypeName) (OptionType valType _ valParse valParseExp valTypeName) = OptionType (AppT (AppT (ConT ''Map.Map) keyType) valType) False
+optionType_map :: Ord k
+               => Char -- ^ Item separator
+               -> Char -- ^ Key/Value separator
+               -> OptionType k -- ^ Key type
+               -> OptionType v -- ^ Value type
+               -> OptionType (Map.Map k v)
+optionType_map itemSep keySep (OptionType keyType _ keyParse keyParseExp keyTypeName) (OptionType valType _ valParse valParseExp valTypeName) = OptionType (AppT (AppT (ConT ''Map.Map) keyType) valType) False
 	(\s -> parseMap keySep keyParse valParse (split itemSep s))
 	[| \s -> parseMap keySep $keyParseExp $valParseExp (split itemSep s) |]
 	("map<" ++ keyTypeName ++ "," ++ valTypeName ++ ">")
@@ -326,13 +326,13 @@ $([d| |])
 --'option' \"optNames\" (\\o -> o
 --    { 'optionLongFlags' = [\"names\"]
 --    , 'optionDefault' = \"Alice;Bob;Charles\"
---    , 'optionType' = 'optionTypeList' \';\' 'optionTypeString'
+--    , 'optionType' = 'optionType_list' \';\' 'optionType_string'
 --    })
 -- @
-optionTypeList :: Char -- ^ Element separator
-               -> OptionType a -- ^ Element type
-               -> OptionType [a]
-optionTypeList sep (OptionType valType _ valParse valParseExp valTypeName) = OptionType (AppT ListT valType) False
+optionType_list :: Char -- ^ Element separator
+                -> OptionType a -- ^ Element type
+                -> OptionType [a]
+optionType_list sep (OptionType valType _ valParse valParseExp valTypeName) = OptionType (AppT ListT valType) False
 	(\s -> parseList valParse (split sep s))
 	[| \s -> parseList $valParseExp (split sep s) |]
 	("list<" ++ valTypeName ++ ">")
@@ -352,7 +352,7 @@ optionTypeList sep (OptionType valType _ valParse valParseExp valTypeName) = Opt
 --    'option' \"optMode\" (\\o -> o
 --        { 'optionLongFlags' = [\"mode\"]
 --        , 'optionDefault' = \"foo\"
---        , 'optionType' = 'optionTypeEnum' ''Mode
+--        , 'optionType' = 'optionType_enum' ''Mode
 --            [ (\"foo\", ModeFoo)
 --            , (\"bar\", ModeBar)
 --            ]
@@ -363,8 +363,8 @@ optionTypeList sep (OptionType valType _ valParse valParseExp valTypeName) = Opt
 -- >Running in mode ModeFoo
 -- >$ ./app --mode=bar
 -- >Running in mode ModeBar
-optionTypeEnum :: Enum a => Name -> [(String, a)] -> OptionType a
-optionTypeEnum typeName values = do
+optionType_enum :: Enum a => Name -> [(String, a)] -> OptionType a
+optionType_enum typeName values = do
 	let intlist = [(k, fromEnum v) | (k, v) <- values]
 	let setString = "{" ++ intercalate ", " [show k | (k, _) <- values] ++ "}."
 	OptionType (ConT typeName) False
