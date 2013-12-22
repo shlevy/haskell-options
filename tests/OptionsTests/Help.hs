@@ -190,7 +190,7 @@ test_CheckHelpFlag = assertions "checkHelpFlag" $ do
 	$expect (checkFlag [OptionKeyHelpGroup "all"] (Just HelpAll))
 	$expect (checkFlag [OptionKeyHelpGroup "foo"] (Just (HelpGroup "foo")))
 
-variedOptions :: OptionDefinitions ()
+variedOptions :: OptionDefinitions
 variedOptions = addHelpFlags $ OptionDefinitions
 	[ OptionInfo (OptionKey "test.a") ['a'] ["long-a"] "def" False "a description here" Nothing Nothing ""
 	, OptionInfo (OptionKey "test.long1") [] ["a-looooooooooooong-option"] "def" False "description here" Nothing Nothing ""

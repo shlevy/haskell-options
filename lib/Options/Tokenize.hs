@@ -37,7 +37,7 @@ instance MonadState Tok where
 	get = Tok get
 	put = Tok . put
 
-tokenize :: OptionDefinitions a -> [String] -> (Maybe String, Either String Tokens)
+tokenize :: OptionDefinitions -> [String] -> (Maybe String, Either String Tokens)
 tokenize (OptionDefinitions options subcommands) argv = runIdentity $ do
 	let st = TokState
 		{ stArgv = argv

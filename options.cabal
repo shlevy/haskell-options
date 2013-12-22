@@ -20,16 +20,21 @@ description:
   @--message@ and @--quiet@:
   .
   @
-  &#x7b;-\# LANGUAGE TemplateHaskell \#-&#x7d;
-  .
+  import Control.Applicative
   import Options
   .
-  defineOptions \"MainOptions\" $ do
-  &#x20;   stringOption \"optMessage\" \"message\" \"Hello world!\"
-  &#x20;       \"A message to show the user.\"
-  &#x20;   boolOption \"optQuiet\" \"quiet\" False
-  &#x20;       \"Whether to be quiet.\"
-  &#x20;
+  data MainOptions = MainOptions
+  &#x20;   &#x7b; optMessage :: String
+  &#x20;   , optQuiet :: Bool
+  &#x20;   &#x7d;
+  .
+  instance 'Options' MainOptions where
+  &#x20;   defineOptions = pure MainOptions
+  &#x20;       \<*\> defineOption \"message\" \"Hello world!\"
+  &#x20;           \"A message to show the user.\"
+  &#x20;       \<*\> defineOption \"quiet\" False
+  &#x20;           \"Whether to be quiet.\"
+  .
   main :: IO ()
   main = runCommand $ \\opts args -> do
   &#x20;   if optQuiet opts
@@ -66,7 +71,6 @@ extra-source-files:
   --
   tests/options-tests.cabal
   tests/OptionsTests.hs
-  tests/OptionsTests/Defaults.hs
   tests/OptionsTests/Help.hs
   tests/OptionsTests/OptionTypes.hs
   tests/OptionsTests/StringParsing.hs
@@ -95,10 +99,9 @@ library
 
   build-depends:
       base >= 4.1 && < 5.0
-    , transformers >= 0.2
     , containers >= 0.1
     , monads-tf >= 0.1
-    , template-haskell >= 2.3
+    , transformers >= 0.2
 
   exposed-modules:
     Options

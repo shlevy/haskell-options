@@ -8,7 +8,6 @@ module Main
 
 import           Test.Chell (Suite, defaultMain)
 
-import           OptionsTests.Defaults (suite_Defaults)
 import           OptionsTests.Help (suite_Help)
 import           OptionsTests.OptionTypes (suite_OptionTypes)
 import           OptionsTests.StringParsing (suite_StringParsing)
@@ -17,8 +16,7 @@ import           OptionsTests.Util (suite_Util)
 
 tests :: [Suite]
 tests =
-	[ suite_Defaults
-	, suite_Help
+	[ suite_Help
 	, suite_OptionTypes
 	, suite_StringParsing
 	, suite_Tokenize

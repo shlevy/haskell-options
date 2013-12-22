@@ -8,25 +8,24 @@ module OptionsTests.StringParsing
 	( suite_StringParsing
 	) where
 
+import           Control.Applicative
 import           Test.Chell
 
 import           Options
 
-$(defineOptions "StringOptions" $ do
-	stringOption "optString" "string" "" ""
-	
-	-- String, ASCII default
-	option "optString_defA" (\o -> o
-		{ optionLongFlags = ["string_defA"]
-		, optionDefault = "a"
-		})
-	
-	-- String, Unicode default
-	option "optString_defU" (\o -> o
-		{ optionLongFlags = ["string_defU"]
-		, optionDefault = "\12354"
-		})
-	)
+data StringOptions = StringOptions
+	{ optString :: String
+	, optString_defA :: String
+	, optString_defU :: String
+	}
+
+instance Options StringOptions where
+	defineOptions = pure StringOptions
+		<*> defineOption "string" "" ""
+		-- String, ASCII default
+		<*> defineOption "string_defA" "a" ""
+		-- String, Unicode default
+		<*> defineOption "string_defU" "\12354" ""
 
 suite_StringParsing :: Suite
 suite_StringParsing = suite "string-parsing"

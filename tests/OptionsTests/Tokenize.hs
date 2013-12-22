@@ -34,7 +34,7 @@ suite_Tokenize = suite "tokenize"
 	test_SubcommandUnknown
 	test_Unicode
 
-commandDefs :: OptionDefinitions ()
+commandDefs :: OptionDefinitions
 commandDefs = OptionDefinitions
 	[ OptionInfo (OptionKey "test.a") ['a'] ["long-a"] "default" False "" Nothing Nothing ""
 	, OptionInfo (OptionKey "test.x") ['x'] ["long-x"] "default" True "" Nothing Nothing ""
@@ -43,7 +43,7 @@ commandDefs = OptionDefinitions
 	]
 	[]
 
-subcommandDefs :: OptionDefinitions ()
+subcommandDefs :: OptionDefinitions
 subcommandDefs = OptionDefinitions
 	[ OptionInfo (OptionKey "test.a") ['a'] ["long-a"] "default" False "" Nothing Nothing ""
 	, OptionInfo (OptionKey "test.b") ['b'] ["long-b"] "default" False "" Nothing Nothing ""
@@ -61,7 +61,7 @@ subcommandDefs = OptionDefinitions
 		])
 	]
 
-unicodeDefs :: OptionDefinitions ()
+unicodeDefs :: OptionDefinitions
 unicodeDefs = OptionDefinitions
 	[ OptionInfo (OptionKey "test.a") ['\12354'] ["long-\12354"] "default" False "" Nothing Nothing ""
 	]

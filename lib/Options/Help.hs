@@ -19,7 +19,7 @@ import           Options.Types
 data HelpFlag = HelpSummary | HelpAll | HelpGroup String
 	deriving (Eq, Show)
 
-addHelpFlags :: OptionDefinitions a -> OptionDefinitions a
+addHelpFlags :: OptionDefinitions -> OptionDefinitions
 addHelpFlags (OptionDefinitions opts subcmds) = OptionDefinitions withHelp subcmdsWithHelp where
 	shortFlags = Set.fromList $ do
 		opt <- opts
@@ -111,7 +111,7 @@ checkHelpFlag tokens = flag where
 			OptionKeyHelpGroup name -> return (HelpGroup name)
 			_ -> []
 
-helpFor :: HelpFlag -> OptionDefinitions a -> Maybe String -> String
+helpFor :: HelpFlag -> OptionDefinitions -> Maybe String -> String
 helpFor flag defs subcmd = case flag of
 	HelpSummary -> execWriter (showHelpSummary defs subcmd)
 	HelpAll -> execWriter (showHelpAll defs subcmd)
@@ -143,7 +143,7 @@ showOptionHelp info = do
 		
 		tell "\n"
 
-showHelpSummary :: OptionDefinitions a -> Maybe String -> Writer String ()
+showHelpSummary :: OptionDefinitions -> Maybe String -> Writer String ()
 showHelpSummary (OptionDefinitions mainOpts subcmds) subcmd = do
 	let subcmdOptions = do
 		subcmdName <- subcmd
@@ -176,7 +176,7 @@ showHelpSummary (OptionDefinitions mainOpts subcmds) subcmd = do
 			forM_ subOpts showOptionHelp
 			tell "\n"
 
-showHelpAll :: OptionDefinitions a -> Maybe String -> Writer String ()
+showHelpAll :: OptionDefinitions -> Maybe String -> Writer String ()
 showHelpAll (OptionDefinitions mainOpts subcmds) subcmd = do
 	let subcmdOptions = do
 		subcmdName <- subcmd
@@ -213,7 +213,7 @@ showHelpGroup (groupInfo, opts) = do
 	forM_ opts showOptionHelp
 	tell "\n"
 
-showHelpOneGroup :: OptionDefinitions a -> String -> Maybe String -> Writer String ()
+showHelpOneGroup :: OptionDefinitions -> String -> Maybe String -> Writer String ()
 showHelpOneGroup (OptionDefinitions mainOpts subcmds) name subcmd = do
 	let opts = case subcmd of
 		Nothing -> mainOpts

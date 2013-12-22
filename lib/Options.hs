@@ -1,4 +1,5 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 
 -- |
 -- Module: Options
@@ -11,15 +12,20 @@
 -- @--message@ and @--quiet@:
 --
 -- @
---{-\# LANGUAGE TemplateHaskell \#-}
---
+--import Control.Applicative
 --import Options
 --
---'defineOptions' \"MainOptions\" $ do
---    'stringOption' \"optMessage\" \"message\" \"Hello world!\"
---        \"A message to show the user.\"
---    'boolOption' \"optQuiet\" \"quiet\" False
---        \"Whether to be quiet.\"
+--data MainOptions = MainOptions
+--    { optMessage :: String
+--    , optQuiet :: Bool
+--    }
+--
+--instance 'Options' MainOptions where
+--    'defineOptions' = pure MainOptions
+--        \<*\> 'defineOption' \"message\" \"Hello world!\"
+--            \"A message to show the user.\"
+--        \<*\> 'defineOption' \"quiet\" False
+--            \"Whether to be quiet.\"
 --
 --main :: IO ()
 --main = 'runCommand' $ \\opts args -> do
@@ -50,47 +56,31 @@
 module Options
 	(
 	-- * Options
-	  Options
+	  Options(..)
 	, defaultOptions
 	
-	-- * Commands
+	-- * Commands and Subcommands
 	, runCommand
-	
-	-- ** Subcommands
 	, Subcommand
 	, subcommand
 	, runSubcommand
 	
 	-- * Defining options
-	, defineOptions
+	, DefineOptions
+	, defineOption
+	, IsOptionType
 	
-	-- ** Simple option definitions
-	, boolOption
-	, stringOption
-	, stringsOption
-	, intOption
-	, integerOption
-	, floatOption
-	, doubleOption
-	
-	-- ** Using imported options
-	, ImportedOptions
-	, importedOptions
-	, options
-	
-	-- ** Advanted option definitions
+	-- ** Advanced option definitions
+	, OptionType
+	, defineOptionWith
 	, Option
-	, option
 	, optionShortFlags
 	, optionLongFlags
 	, optionDefault
-	, optionType
 	, optionDescription
 	, optionGroup
 	
-	-- ** Option types
-	, OptionType
-	
+	-- ** Built-in option types
 	, optionType_bool
 	
 	, optionType_string
@@ -116,9 +106,17 @@ module Options
 	, optionType_map
 	, optionType_enum
 	
+	-- ** Defining custom option types
+	, optionType
+	, optionTypeName
+	, optionTypeDefault
+	, optionTypeParse
+	, optionTypeShow
+	, optionTypeUnary
+	
 	-- * Option groups
 	, Group
-	, group
+	, groupName
 	, groupTitle
 	, groupDescription
 	
@@ -139,167 +137,134 @@ module Options
 	, parseSubcommand
 	) where
 
-import           Control.Monad (forM, unless, when)
-import           Control.Monad.Error (ErrorT, runErrorT, throwError)
-import           Control.Monad.IO.Class
-import           Control.Monad.Reader (Reader, runReader, ask)
-import           Control.Monad.State (StateT, execStateT, get, modify)
-import           Data.List (foldl', intercalate)
+import           Control.Applicative
+import           Control.Monad.IO.Class (liftIO, MonadIO)
 import qualified Data.Map as Map
-import qualified Data.Set as Set
+import           Data.Maybe (isJust)
 import qualified System.Environment
 import           System.Exit (exitFailure, exitSuccess)
-import           System.IO
-
-import           Language.Haskell.TH
-import           Language.Haskell.TH.Syntax (mkNameG_tc)
+import           System.IO (hPutStr, hPutStrLn, stderr, stdout)
 
 import           Options.Help
 import           Options.OptionTypes
 import           Options.Tokenize
 import           Options.Types
-import           Options.Util
 
 -- | Options are defined together in a single data type, which will be an
 -- instance of 'Options'.
 --
 -- See 'defineOptions' for details on defining instances of 'Options'.
 --
--- See 'options' for details on including imported 'Options' types in locally
--- defined options.
-class Options a where
-	optionsDefs :: OptionDefinitions a
-	optionsParse' :: Tokens -> Either String a
-	optionsMeta :: OptionsMeta a
+-- See 'includeOptions' for details on including imported 'Options' types in
+-- locally defined options.
+class Options opts where
+	-- | TODO docs
+	--
+	-- Use of 'options' may be arbitrarily nested. Library authors are encouraged
+	-- to aggregate their options into a single top-level type, so application
+	-- authors can include it easily in their own option definitions.
+	defineOptions :: DefineOptions opts
 
-optionsParse :: Options a => Tokens -> Either String (a, [String])
-optionsParse tokens = case optionsParse' tokens of
-	Left err -> Left err
-	Right opts -> Right (opts, tokensArgv tokens)
+data DefineOptions a = DefineOptions a (Integer -> (Integer, [OptionInfo])) (Integer -> Map.Map OptionKey Token -> Either String (Integer, a))
 
-data OptionsMeta a = OptionsMeta
-	{ optionsMetaName :: Name
-	, optionsMetaKeys :: Set.Set String
-	, optionsMetaShortFlags :: Set.Set Char
-	, optionsMetaLongFlags :: Set.Set String
-	}
+instance Functor DefineOptions where
+	fmap fn (DefineOptions defaultValue getInfo parse) = DefineOptions (fn defaultValue) getInfo (\key tokens -> case parse key tokens of
+		Left err -> Left err
+		Right (key', a) -> Right (key', fn a))
+
+instance Applicative DefineOptions where
+	pure a = DefineOptions a (\key -> (key, [])) (\key _ -> Right (key, a))
+	(DefineOptions acc_default acc_getInfo acc_parse) <*> (DefineOptions defaultValue getInfo parse) = DefineOptions
+		(acc_default defaultValue)
+		(\key -> case acc_getInfo key of
+			(key', infos) -> case getInfo key' of
+				(key'', infos') -> (key'', infos ++ infos'))
+		(\key tokens -> case acc_parse key tokens of
+			Left err -> Left err
+			Right (key', fn) -> case parse key' tokens of
+				Left err -> Left err
+				Right (key'', a) -> Right (key'', fn a))
 
 -- | An options value containing only the default values for each option.
 -- This is equivalent to the options value when parsing an empty argument
 -- list.
-defaultOptions :: Options a => a
-defaultOptions = opts where
-	parsed = parseOptions []
-	opts = case parsedOptions parsed of
-		Just v -> v
-		Nothing -> error ("Internal error while parsing default options: " ++ (case parsedError parsed of
-			Just err -> err
-			Nothing -> "(no error provided)"))
+defaultOptions :: Options opts => opts
+defaultOptions = case defineOptions of
+	(DefineOptions def _ _) -> def
 
-newtype OptionsM a = OptionsM { unOptionsM :: StateT OptionsDeclState (ErrorT String (Reader Loc)) a }
+class IsOptionType a where
+	builtinOptionType :: OptionType a
 
-data OptionsDeclState = OptionsDeclState
-	{ stDecls :: [(Name, Type, Q Exp, Q Exp)]
-	, stSeenFieldNames :: Set.Set String
-	, stSeenKeys :: Set.Set String
-	, stSeenShortFlags :: Set.Set Char
-	, stSeenLongFlags :: Set.Set String
-	}
+instance IsOptionType Bool where
+	builtinOptionType = optionType_bool
 
-instance Monad OptionsM where
-	return = OptionsM . return
-	m >>= f = OptionsM (unOptionsM m >>= (unOptionsM . f))
+instance IsOptionType a => IsOptionType (Maybe a) where
+	builtinOptionType = optionType_maybe builtinOptionType
 
-runOptionsM :: Loc -> OptionsM () -> Either String OptionsDeclState
-runOptionsM loc (OptionsM m) = runReader (runErrorT (execStateT m initState)) loc where
-	initState = OptionsDeclState [] Set.empty Set.empty Set.empty Set.empty
+instance IsOptionType String where
+	builtinOptionType = optionType_string
 
--- | Defines a new data type, containing fields for application or library
--- options. The new type will be an instance of 'Options'.
+instance IsOptionType Integer where
+	builtinOptionType = optionType_integer
+
+defineOption :: IsOptionType a
+             => String -- long flag
+             -> a -- default value
+             -> String -- description
+             -> DefineOptions a
+defineOption flag def desc = defineOptionWith builtinOptionType (\o -> o
+	{ optionLongFlags = [flag]
+	, optionDefault = def
+	, optionDescription = desc
+	})
+
+-- | Defines a new option in the current options type.
 --
--- Example: this use of @defineOptions@:
+-- All options must have a one or more /flags/. Options may also have a
+-- default value, a description, and a group.
+--
+-- The /flags/ are how the user specifies an option on the command line. Flags
+-- may be /short/ or /long/. See 'optionShortFlags' and 'optionLongFlags' for
+-- details.
 --
 -- @
---'defineOptions' \"MainOptions\" $ do
---    'stringOption' \"optMessage\" \"message\" \"Hello world!\" \"\"
---    'boolOption' \"optQuiet\" \"quiet\" False \"\"
+--'defineOptionWith' 'optionType_word16' (\\o -> o
+--    { 'optionLongFlags' = [\"port\"]
+--    , 'optionDefault' = \"80\"
+--    })
 -- @
---
--- expands to the following definition:
---
--- >data MainOptions = MainOptions
--- >    { optMessage :: String
--- >    , optQuiet :: Bool
--- >    }
--- >
--- >instance Options MainOptions
---
-defineOptions :: String -> OptionsM () -> Q [Dec]
-defineOptions rawName optionsM = do
-	loc <- location
-	let dataName = mkName rawName
-	declState <- case runOptionsM loc optionsM of
-		Left err -> fail err
-		Right st -> return st
-	let fields = stDecls declState
+defineOptionWith :: OptionType a -> (Option a -> Option a) -> DefineOptions a
+defineOptionWith t fn = DefineOptions (optionDefault opt) getInfo parser where
+	opt = fn (Option
+		{ optionShortFlags = []
+		, optionLongFlags = []
+		, optionDefault = optionTypeDefault t
+		, optionDescription = ""
+		, optionGroup = Nothing
+		, optionLocation = Nothing
+		})
 	
-	let dataDec = DataD [] dataName [] [RecC dataName
-		[(fName, NotStrict, t) | (fName, t, _, _) <- fields]
-		][]
+	getInfo key = (key+1, [OptionInfo
+		{ optionInfoKey = OptionKeyGenerated key
+		, optionInfoShortFlags = optionShortFlags opt
+		, optionInfoLongFlags = optionLongFlags opt
+		, optionInfoDefault = optionTypeShow t (optionDefault opt)
+		, optionInfoDescription = optionDescription opt
+		, optionInfoGroup = optionGroup opt
+		, optionInfoLocation = optionLocation opt
+		, optionInfoTypeName = optionTypeName t
+		, optionInfoUnary = isJust (optionTypeUnary t)
+		}])
 	
-	exp_optionsDefs <- getOptionsDefs fields
-	exp_optionsParse <- getOptionsParse dataName fields
-	exp_optionsMeta <- getOptionsMeta loc rawName declState
-	let instanceDec = InstanceD [] (AppT (ConT ''Options) (ConT dataName))
-		[ ValD (VarP 'optionsDefs) (NormalB exp_optionsDefs) []
-		, ValD (VarP 'optionsParse') (NormalB exp_optionsParse) []
-		, ValD (VarP 'optionsMeta) (NormalB exp_optionsMeta) []
-		]
-	
-	return [dataDec, instanceDec]
-
-getOptionsDefs :: [(Name, Type, Q Exp, Q Exp)] -> Q Exp
-getOptionsDefs fields = do
-	infoExps <- forM fields (\(_, _, infoExp, _) -> infoExp)
-	[| OptionDefinitions (concat $(return (ListE infoExps))) [] |]
-
-getOptionsParse :: Name -> [(Name, Type, Q Exp, Q Exp)] -> Q Exp
-getOptionsParse dataName fields = do
-	let genBind (_, _, _, qParseExp) = do
-		varName <- newName "_val"
-		parseExp <- qParseExp
-		return (varName, BindS (VarP varName) parseExp)
-	
-	names_and_binds <- mapM genBind fields
-	let names = [n | (n, _) <- names_and_binds]
-	let binds = [b | (_, b) <- names_and_binds]
-	
-	returnExp <- [| return |]
-	let consExp = foldl' AppE (ConE dataName) (map VarE names)
-	let parserM = return (DoE (binds ++ [NoBindS (AppE returnExp consExp)]))
-	[| unParserM $parserM |]
-
-getOptionsMeta :: Loc -> String -> OptionsDeclState -> Q Exp
-getOptionsMeta loc typeName st = do
-	let pkg = loc_package loc
-	let mod' = loc_module loc
-	let keys = Set.toList (stSeenKeys st)
-	let shorts = Set.toList (stSeenShortFlags st)
-	let longs = Set.toList (stSeenLongFlags st)
-	[| OptionsMeta (mkNameG_tc pkg mod' typeName) (Set.fromList keys) (Set.fromList shorts) (Set.fromList longs) |]
-
-newtype ParserM optType a = ParserM { unParserM :: Tokens -> Either String a }
-
-instance Monad (ParserM optType) where
-	return x = ParserM (\_ -> Right x)
-	m >>= f = ParserM (\env -> case unParserM m env of
-		Left err -> Left err
-		Right x -> unParserM (f x) env)
-
-putOptionDecl :: Name -> Type -> Q Exp -> Q Exp -> OptionsM ()
-putOptionDecl name qtype infoExp parseExp = OptionsM (modify (\st -> st
-	{ stDecls = stDecls st ++ [(name, qtype, infoExp, parseExp)]
-	}))
+	parser key tokens = case Map.lookup (OptionKeyGenerated key) tokens of
+		Nothing -> Right (key+1, optionDefault opt)
+		Just tok -> case tok of
+			TokenUnary flagName -> case optionTypeUnary t of
+				Nothing -> Left ("The flag " ++ flagName ++ " requires an argument.")
+				Just val -> Right (key+1, val)
+			Token flagName rawValue -> case optionTypeParse t rawValue of
+				Left err -> Left ("Value for flag " ++ flagName ++ " is invalid: " ++ err)
+				Right val -> Right (key+1, val)
 
 data Option a = Option
 	{
@@ -327,13 +292,7 @@ data Option a = Option
 	
 	-- | Options may have a default value. This will be parsed as if the
 	-- user had entered it on the command line.
-	, optionDefault :: String
-	
-	-- | There are many types which an application or library might want
-	-- to use when designing their options. By default, options are
-	-- strings, but 'optionType' may be set to any supported type. See
-	-- the \"Option types\" section for a list of supported types.
-	, optionType :: OptionType a
+	, optionDefault :: a
 	
 	-- | An option's description is used with the default implementation
 	-- of @--help@. It should be a short string describing what the option
@@ -342,362 +301,18 @@ data Option a = Option
 	
 	-- | Which group the option is in. See the \"Option groups\" section
 	-- for details.
-	, optionGroup :: Group
+	, optionGroup :: Maybe Group
+	
+	-- | TODO docs
+	, optionLocation :: Maybe Location
 	}
 
--- | Defines a new option in the current options type.
---
--- All options must have a /field name/ and one or more /flags/. Options may
--- also have a default value, a description, or a group.
---
--- The field name is how the option will be accessed in Haskell, and is
--- typically prefixed with \"opt\". This is used to define a record field,
--- and must be a valid Haskell field name (see 'defineOptions' for details).
---
--- The /flags/ are how the user specifies an option on the command line. Flags
--- may be /short/ or /long/. See 'optionShortFlags' and 'optionLongFlags' for
--- details.
---
--- @
---'option' \"optPort\" (\\o -> o
---    { 'optionLongFlags' = [\"port\"]
---    , 'optionDefault' = \"80\"
---    , 'optionType' = 'optionType_word16'
---    }
--- @
-option :: String -- ^ Field name
-       -> (Option String -> Option a) -- ^ Option definition
-       -> OptionsM ()
-option fieldName f = do
-	let emptyGroup = Group
-		{ groupName = ""
-		, groupTitle = ""
-		, groupDescription = ""
-		}
-	let opt = f (Option
-		{ optionShortFlags = []
-		, optionLongFlags = []
-		, optionDefault = ""
-		, optionType = optionType_string
-		, optionDescription = ""
-		, optionGroup = emptyGroup
-		})
-	
-	loc <- OptionsM ask
-	let key = loc_package loc ++ ":" ++ loc_module loc ++ ":" ++ fieldName
-	
-	let shorts = optionShortFlags opt
-	let longs = optionLongFlags opt
-	let def = optionDefault opt
-	
-	let desc = optionDescription opt
-	
-	let optGroup = optionGroup opt
-	let optGroupDesc = groupTitle optGroup
-	let optGroupHelpDesc = groupDescription optGroup
-	let groupInfoExp = case groupName optGroup of
-		"" -> [| Nothing |]
-		n -> [| Just (Group n optGroupDesc optGroupHelpDesc) |]
-	
-	checkFieldName fieldName
-	checkValidFlags fieldName shorts longs
-	checkUniqueKey key
-	checkUniqueFlags fieldName shorts longs
-	
-	case optionTypeParse (optionType opt) def of
-		Right _ -> return ()
-		Left err -> OptionsM (throwError ("Invalid default value for option " ++ show fieldName ++ ": " ++ err))
-	
-	OptionsM (modify (\st -> st
-		{ stSeenFieldNames = Set.insert fieldName (stSeenFieldNames st)
-		, stSeenKeys = Set.insert key (stSeenKeys st)
-		, stSeenShortFlags = Set.union (Set.fromList shorts) (stSeenShortFlags st)
-		, stSeenLongFlags = Set.union (Set.fromList longs) (stSeenLongFlags st)
-		}))
-	
-	let unary = optionTypeUnary (optionType opt)
-	let typeName = optionTypeName (optionType opt)
-	let locPackage = loc_package loc
-	let locModule = loc_module loc
-	let locFilename = loc_filename loc
-	let locLine = case loc_start loc of
-		(line, _) -> toInteger line
-	putOptionDecl
-		(mkName fieldName)
-		(optionTypeTemplateType (optionType opt))
-		[| [OptionInfo (OptionKey key) shorts longs def unary desc $groupInfoExp (Just (Location locPackage locModule locFilename locLine)) typeName] |]
-		[| parseOptionTok (OptionKey key) $(optionTypeTemplateParse (optionType opt)) def |]
-
-parseOptionTok :: OptionKey -> (String -> Either String a) -> String -> ParserM optType a
-parseOptionTok key p def = do
-	tokens <- ParserM (\t -> Right t)
-	case Map.lookup key (tokensMap tokens) of
-		Nothing -> case p def of
-			-- shouldn't happen
-			Left err -> ParserM (\_ -> Left ("Internal error while parsing default options: " ++ err))
-			Right a -> return a
-		Just (Token flagName val) -> case p val of
-			Left err -> ParserM (\_ -> Left ("Value for flag " ++ flagName ++ " is invalid: " ++ err))
-			Right a -> return a
-		Just (TokenUnary flagName) -> case p "true" of
-			Left err -> ParserM (\_ -> Left ("Value for flag " ++ flagName ++ " is invalid: " ++ err))
-			Right a -> return a
-
-checkFieldName :: String -> OptionsM ()
-checkFieldName name = do
-	unless (validFieldName name)
-		(OptionsM (throwError ("Option field name " ++ show name ++ " is invalid.")))
-	st <- OptionsM get
-	when (Set.member name (stSeenFieldNames st))
-		(OptionsM (throwError ("Duplicate definitions of field " ++ show name ++ ".")))
-
-checkUniqueKey :: String -> OptionsM ()
-checkUniqueKey key = do
-	st <- OptionsM get
-	when (Set.member key (stSeenKeys st))
-		(OptionsM (throwError ("Option key " ++ show key ++ " has already been defined. This should never happen; please send an error report to the maintainer of the 'options' package.")))
-
-checkValidFlags :: String -> [Char] -> [String] -> OptionsM ()
-checkValidFlags fieldName shorts longs = do
-	-- Check that at least one flag is defined (in either 'shorts' or 'longs').
-	when (length shorts == 0 && length longs == 0)
-		(OptionsM (throwError ("Option " ++ show fieldName ++ " does not define any flags.")))
-	
-	-- Check that 'shorts' contains only non-repeated letters and digits
-	when (hasDuplicates shorts)
-		(OptionsM (throwError ("Option " ++ show fieldName ++ " has duplicate short flags.")))
-	case filter (not . validShortFlag) shorts of
-		[] -> return ()
-		invalid -> OptionsM (throwError ("Option " ++ show fieldName ++ " has invalid short flags " ++ show invalid ++ "."))
-	
-	-- Check that 'longs' contains only non-repeated, non-empty strings
-	-- containing {LETTER,DIGIT,-,_} and starting with a letter.
-	when (hasDuplicates longs)
-		(OptionsM (throwError ("Option " ++ show fieldName ++ " has duplicate long flags.")))
-	case filter (not . validLongFlag) longs of
-		[] -> return ()
-		invalid -> OptionsM (throwError ("Option " ++ show fieldName ++ " has invalid long flags " ++ show invalid ++ "."))
-
-checkUniqueFlags :: String -> [Char] -> [String] -> OptionsM ()
-checkUniqueFlags fieldName shorts longs = do
-	st <- OptionsM get
-	
-	-- Check that none of this option's flags are already used.
-	let dupShort = do
-		f <- Set.toList (Set.intersection (stSeenShortFlags st) (Set.fromList shorts))
-		return ('-' : [f])
-	let dupLong = do
-		f <- Set.toList (Set.intersection (stSeenLongFlags st) (Set.fromList longs))
-		return ("--" ++ f)
-	let dups = dupShort ++ dupLong
-	unless (null dups)
-		(OptionsM (throwError ("Option " ++ show fieldName ++ " uses already-defined flags " ++ show dups ++ ".")))
-
--- | Include options defined elsewhere into the current options definition.
---
--- This is typically used by application developers to include options defined
--- in third-party libraries. For example, the author of the \"foo\" library
--- would define and export @FooOptions@:
---
--- @
---module Foo (FooOptions, foo) where
---
---import Options
---
---'defineOptions' \"FooOptions\" $ do
---    'boolOption' \"optFrob\" \"frob\" True \"Enable frobnication.\"
---
---foo :: FooOptions -> IO ()
--- @
---
--- and the author of an application would use @options@ to let users specify
--- @--frob@:
---
--- @
---module Main where
---
---import Options
---import Foo
---
---'defineOptions' \"MainOptions\" $ do
---   'boolOption' \"optVerbose\" \"verbose\" False \"Be really loud.\"
---   'options' \"optFoo\" ('importedOptions' :: 'ImportedOptions' FooOptions)
---
---main :: IO ()
---main = runCommand $ \\opts args -> do
---    foo (optFoo opts)
--- @
---
--- Use of 'options' may be arbitrarily nested. Library authors are encouraged
--- to aggregate their options into a single top-level type, so application
--- authors can include it easily in their own option definitions.
-options :: String -> ImportedOptions a -> OptionsM ()
-options fieldName (ImportedOptions meta) = do
-	checkFieldName fieldName
-	
-	let typeName = optionsMetaName meta
-	st <- OptionsM get
-	
-	-- Check unique keys
-	let dupKeys = Set.intersection (stSeenKeys st) (optionsMetaKeys meta)
-	unless (Set.null dupKeys)
-		(OptionsM (throwError ("Imported options type " ++ show typeName ++ " contains duplicate keys " ++ show (Set.toList dupKeys) ++ ". This should never happen; please send an error report to the maintainer of the 'options' package.")))
-	
-	-- Check unique flags
-	let dupShort = do
-		f <- Set.toList (Set.intersection (stSeenShortFlags st) (optionsMetaShortFlags meta))
-		return ('-' : [f])
-	let dupLong = do
-		f <- Set.toList (Set.intersection (stSeenLongFlags st) (optionsMetaLongFlags meta))
-		return ("--" ++ f)
-	let dups = dupShort ++ dupLong
-	unless (null dups)
-		(OptionsM (throwError ("Imported options type " ++ show typeName ++ " contains conflicting definitions for flags " ++ show dups ++ ".")))
-	
-	OptionsM (modify (\st' -> st'
-		{ stSeenFieldNames = Set.insert fieldName (stSeenFieldNames st)
-		, stSeenShortFlags = Set.union (optionsMetaShortFlags meta) (stSeenShortFlags st)
-		, stSeenLongFlags = Set.union (optionsMetaLongFlags meta) (stSeenLongFlags st)
-		}))
-	
-	putOptionDecl
-		(mkName fieldName)
-		(ConT typeName)
-		[| suboptsDefs $(varE (mkName fieldName)) |]
-		[| parseSubOptions |]
-
-newtype ImportedOptions a = ImportedOptions (OptionsMeta a)
-
-importedOptions :: Options a => ImportedOptions a
-importedOptions = ImportedOptions optionsMeta
-
-parseSubOptions :: Options a => ParserM optType a
-parseSubOptions = do
-	tokens <- ParserM (\t -> Right t)
-	case optionsParse' tokens of
-		Left err -> ParserM (\_ -> Left err)
-		Right x -> return x
-
-suboptsDefs :: Options a => (b -> a) -> [OptionInfo]
-suboptsDefs rec = defsB where
-	defsB = case defsA rec of
-		OptionDefinitions opts _ -> opts
-	defsA :: Options a => (b -> a) -> OptionDefinitions a
-	defsA _ = optionsDefs
-
--- | Define an option of type @'Bool'@. This is a simple wrapper around
--- 'option'.
-boolOption :: String -- ^ Field name
-           -> String -- ^ Long flag
-           -> Bool -- ^ Default value
-           -> String -- ^ Description in @--help@
-           -> OptionsM ()
-boolOption name flag def desc = option name (\o -> o
-	{ optionLongFlags = [flag]
-	, optionDefault = if def then "true" else "false"
-	, optionType = optionType_bool
-	, optionDescription = desc
-	})
-
--- | Define an option of type @'String'@. This is a simple wrapper around
--- 'option'.
-stringOption :: String -- ^ Field name
-             -> String -- ^ Long flag
-             -> String -- ^ Default value
-             -> String -- ^ Description in @--help@
-             -> OptionsM ()
-stringOption name flag def desc = option name (\o -> o
-	{ optionLongFlags = [flag]
-	, optionDefault = def
-	, optionDescription = desc
-	})
-
--- | Define an option of type @['String']@. This is a simple wrapper around
--- 'option'. Items are comma-separated.
-stringsOption :: String -- ^ Field name
-              -> String -- ^ Long flag
-              -> [String] -- ^ Default value
-              -> String -- ^ Description in @--help@
-              -> OptionsM ()
-stringsOption name flag def desc = option name (\o -> o
-	{ optionLongFlags = [flag]
-	, optionDefault = intercalate "," def
-	, optionType = optionType_list ',' optionType_string
-	, optionDescription = desc
-	})
-
--- | Define an option of type @'Int'@. This is a simple wrapper around
--- 'option'.
-intOption :: String -- ^ Field name
-          -> String -- ^ Long flag
-          -> Int -- ^ Default value
-          -> String -- ^ Description in @--help@
-          -> OptionsM ()
-intOption name flag def desc = option name (\o -> o
-	{ optionLongFlags = [flag]
-	, optionDefault = show def
-	, optionType = optionType_int
-	, optionDescription = desc
-	})
-
--- | Define an option of type @'Integer'@. This is a simple wrapper around
--- 'option'.
-integerOption :: String -- ^ Field name
-              -> String -- ^ Long flag
-              -> Integer -- ^ Default value
-              -> String -- ^ Description in @--help@
-              -> OptionsM ()
-integerOption name flag def desc = option name (\o -> o
-	{ optionLongFlags = [flag]
-	, optionDefault = show def
-	, optionType = optionType_integer
-	, optionDescription = desc
-	})
-
--- | Define an option of type @'Float'@. This is a simple wrapper around
--- 'option'.
-floatOption :: String -- ^ Field name
-            -> String -- ^ Long flag
-            -> Float -- ^ Default value
-            -> String -- ^ Description in @--help@
-            -> OptionsM ()
-floatOption name flag def desc = option name (\o -> o
-	{ optionLongFlags = [flag]
-	, optionDefault = show def
-	, optionType = optionType_float
-	, optionDescription = desc
-	})
-
--- | Define an option of type @'Double'@. This is a simple wrapper around
--- 'option'.
-doubleOption :: String -- ^ Field name
-             -> String -- ^ Long flag
-             -> Double -- ^ Default value
-             -> String -- ^ Description in @--help@
-             -> OptionsM ()
-doubleOption name flag def desc = option name (\o -> o
-	{ optionLongFlags = [flag]
-	, optionDefault = show def
-	, optionType = optionType_double
-	, optionDescription = desc
-	})
-
--- | Define an option group.
---
--- Option groups are used to make long @--help@ output more readable, by
--- hiding obscure or rarely-used options from the main summary.
---
--- If an option is in a group named @\"examples\"@, it will only be shown
--- in the help output if the user provides the flag @--help-examples@ or
--- @--help-all@. The flag @--help-all@ will show all options, in all groups.
-group :: String -- ^ Group name
-      -> (Group -> Group)
-      -> Group
-group name f = f (Group
-	{ groupName = name
-	, groupTitle = ""
-	, groupDescription = ""
-	})
+-- * Each option defines at least one short or long flag.
+-- * There are no duplicate short or long flags, except between subcommands.
+-- * All short or long flags have a reasonable name.
+-- * All subcommands have unique names.
+validateOptionDefs :: [OptionInfo] -> [(String, [OptionInfo])] -> Either String OptionDefinitions
+validateOptionDefs cmdInfos subInfos = Right (addHelpFlags (OptionDefinitions cmdInfos subInfos)) -- TODO
 
 -- | See @'parseOptions'@ and @'parseSubcommand'@.
 class Parsed a where
@@ -788,17 +403,20 @@ parsedHelp = parsedHelp_
 --                exitSuccess
 -- @
 parseOptions :: Options opts => [String] -> ParsedOptions opts
-parseOptions argv = parsed (addHelpFlags optionsDefs) optionsParse where
-	help defs flag = helpFor flag defs Nothing
+parseOptions argv = parsed where
+	(DefineOptions _ getInfos parser) = defineOptions
+	(_, optionInfos) = getInfos 0
+	parseTokens = parser 0
 	
-	parsed :: OptionDefinitions opts -> (Tokens -> Either String (opts, [String])) -> ParsedOptions opts
-	parsed defs parse = case tokenize defs argv of
-		(_, Left err) -> ParsedOptions Nothing (Just err) (help defs HelpSummary) []
-		(_, Right tokens) -> case checkHelpFlag tokens of
-			Just helpFlag -> ParsedOptions Nothing Nothing (help defs helpFlag) []
-			Nothing -> case parse tokens of
-				Left err -> ParsedOptions Nothing (Just err) (help defs HelpSummary) []
-				Right (opts, args) -> ParsedOptions (Just opts) Nothing (help defs HelpSummary) args
+	parsed = case validateOptionDefs optionInfos [] of
+		Left err -> ParsedOptions Nothing (Just err) "" []
+		Right optionDefs -> case tokenize (addHelpFlags optionDefs) argv of
+			(_, Left err) -> ParsedOptions Nothing (Just err) (helpFor HelpSummary optionDefs Nothing) []
+			(_, Right tokens) -> case checkHelpFlag tokens of
+				Just helpFlag -> ParsedOptions Nothing Nothing (helpFor helpFlag optionDefs Nothing) []
+				Nothing -> case parseTokens (tokensMap tokens) of
+					Left err -> ParsedOptions Nothing (Just err) (helpFor HelpSummary optionDefs Nothing) []
+					Right (_, opts) -> ParsedOptions (Just opts) Nothing (helpFor HelpSummary optionDefs Nothing) (tokensArgv tokens)
 
 -- | Retrieve 'System.Environment.getArgs', and attempt to parse it into a
 -- valid value of an 'Options' type plus a list of left-over arguments. The
@@ -827,37 +445,21 @@ runCommand io = do
 				hPutStr stdout (parsedHelp parsed)
 				exitSuccess
 
-data Subcommand cmdOpts action = Subcommand String [OptionInfo] (Tokens -> Either String action)
+data Subcommand cmdOpts action = Subcommand String (Integer -> ([OptionInfo], (cmdOpts -> Tokens -> Either String action), Integer))
 
 subcommand :: (Options cmdOpts, Options subcmdOpts)
            => String -- ^ The subcommand name.
            -> (cmdOpts -> subcmdOpts -> [String] -> action) -- ^ The action to run.
            -> Subcommand cmdOpts action
-subcommand name fn = Subcommand name opts checkTokens where
-	opts = optInfosFromOptType fn optionsDefs
+subcommand name fn = Subcommand name (\initialKey -> let
+	(DefineOptions _ getInfos parser) = defineOptions
+	(nextKey, optionInfos) = getInfos initialKey
+	parseTokens = parser initialKey
 	
-	optInfosFromOptType :: Options subcmdOpts => (cmdOpts -> subcmdOpts -> [String] -> action) -> OptionDefinitions subcmdOpts -> [OptionInfo]
-	optInfosFromOptType _ (OptionDefinitions infos _) = infos
-	
-	checkTokens tokens = case optionsParse' tokens of
+	runAction cmdOpts tokens = case parseTokens (tokensMap tokens) of
 		Left err -> Left err
-		Right cmdOpts -> case optionsParse tokens of
-			Left err -> Left err
-			Right (subcmdOpts, args) -> Right (fn cmdOpts subcmdOpts args)
-
-subcommandInfo :: Subcommand cmdOpts action -> (String, [OptionInfo])
-subcommandInfo (Subcommand name opts _) = (name, opts)
-
-addSubcommands :: [Subcommand cmdOpts action] -> OptionDefinitions cmdOpts -> OptionDefinitions cmdOpts
-addSubcommands subcommands defs = case defs of
-	OptionDefinitions mainOpts subcmdOpts -> OptionDefinitions mainOpts (subcmdOpts ++ map subcommandInfo subcommands)
-
-findSubcmd :: [Subcommand cmdOpts action] -> String -> Tokens -> Either String action
-findSubcmd subcommands name tokens = subcmd where
-	asoc = [(n, cmd) | cmd@(Subcommand n _ _) <- subcommands]
-	subcmd = case lookup name asoc of
-		Nothing -> Left ("Unknown subcommand " ++ show name ++ ".")
-		Just (Subcommand _ _ checkTokens) -> checkTokens tokens
+		Right (_, subOpts) -> Right (fn cmdOpts subOpts (tokensArgv tokens))
+	in (optionInfos, runAction, nextKey))
 
 -- | Attempt to convert a list of command-line arguments into a subcommand
 -- action. This can be used by application developers who want finer control
@@ -890,18 +492,38 @@ findSubcmd subcommands name tokens = subcmd where
 --
 parseSubcommand :: Options cmdOpts => [Subcommand cmdOpts action] -> [String] -> ParsedSubcommand action
 parseSubcommand subcommands argv = parsed where
-	defs = addHelpFlags (addSubcommands subcommands optionsDefs)
-	help flag = helpFor flag defs
-	parsed = case tokenize defs argv of
-		(subcmd, Left err) -> ParsedSubcommand Nothing (Just err) (help HelpSummary subcmd)
-		(Nothing, Right tokens) -> case checkHelpFlag tokens of
-			Just helpFlag -> ParsedSubcommand Nothing Nothing (help helpFlag Nothing)
-			Nothing -> ParsedSubcommand Nothing (Just "No subcommand specified") (help HelpSummary Nothing)
-		(Just subcmdName, Right tokens) -> case findSubcmd subcommands subcmdName tokens of
-			Left err -> ParsedSubcommand Nothing (Just err) (help HelpSummary (Just subcmdName))
-			Right io -> case checkHelpFlag tokens of
-				Just helpFlag -> ParsedSubcommand Nothing Nothing (help helpFlag (Just subcmdName))
-				Nothing -> ParsedSubcommand (Just io) Nothing (help HelpSummary (Just subcmdName))
+	(DefineOptions _ getInfos parser) = defineOptions
+	(cmdNextKey, cmdInfos) = getInfos 0
+	cmdParseTokens = parser 0
+	
+	subcmdInfos = do
+		Subcommand name fn <- subcommands
+		let (infos, _, _) = fn cmdNextKey
+		return (name, infos)
+	
+	subcmdRunners = Map.fromList $ do
+		Subcommand name fn <- subcommands
+		let (_, runner, _) = fn cmdNextKey
+		return (name, runner)
+	
+	parsed = case validateOptionDefs cmdInfos subcmdInfos of
+		Left err -> ParsedSubcommand Nothing (Just err) ""
+		Right optionDefs -> case tokenize (addHelpFlags optionDefs) argv of
+			(subcmd, Left err) -> ParsedSubcommand Nothing (Just err) (helpFor HelpSummary optionDefs subcmd)
+			(subcmd, Right tokens) -> case checkHelpFlag tokens of
+				Just helpFlag -> ParsedSubcommand Nothing Nothing (helpFor helpFlag optionDefs subcmd)
+				Nothing -> case findAction tokens subcmd of
+					Left err -> ParsedSubcommand Nothing (Just err) (helpFor HelpSummary optionDefs subcmd)
+					Right action -> ParsedSubcommand (Just action) Nothing (helpFor HelpSummary optionDefs subcmd)
+	
+	findAction _ Nothing = Left "No subcommand specified"
+	findAction tokens (Just subcmdName) = case cmdParseTokens (tokensMap tokens) of
+		Left err -> Left err
+		Right (_, cmdOpts) -> case Map.lookup subcmdName subcmdRunners of
+			Nothing -> Left ("Unknown subcommand " ++ show subcmdName ++ ".")
+			Just getRunner -> case getRunner cmdOpts tokens of
+				Left err -> Left err
+				Right action -> Right action
 
 -- | Used to run applications that are split into subcommands.
 --
@@ -912,19 +534,24 @@ parseSubcommand subcommands argv = parsed where
 -- acts like 'runCommand'.
 --
 -- @
---{-\# LANGUAGE TemplateHaskell \#-}
---
+--import Control.Applicative
 --import Control.Monad (unless)
 --import Options
 --
---'defineOptions' \"MainOptions\" $ do
---    'boolOption' \"optQuiet\" \"quiet\" False \"Whether to be quiet.\"
+--data MainOptions = MainOptions { optQuiet :: Bool }
+--instance 'Options' MainOptions where
+--    'defineOptions' = pure MainOptions
+--        \<*\> 'defineOption' \"quiet\" False \"Whether to be quiet.\"
 --
---'defineOptions' \"HelloOpts\" $ do
---    'stringOption' \"optHello\" \"hello\" \"Hello!\" \"How to say hello.\"
+--data HelloOpts = HelloOpts { optHello :: String }
+--instance 'Options' HelloOpts where
+--    'defineOptions' = pure HelloOpts
+--        \<*\> 'defineOption' \"hello\" \"Hello!\" \"How to say hello.\"
 --
---'defineOptions' \"ByeOpts\" $ do
---    'stringOption' \"optName\" \"name\" \"\" \"The user's name.\"
+--data ByeOpts = ByeOpts { optName :: String }
+--instance 'Options' ByeOpts where
+--    'defineOptions' = pure ByeOpts
+--        \<*\> 'defineOption' \"name\" \"\" \"The user's name.\"
 --
 --hello :: MainOptions -> HelloOpts -> [String] -> IO ()
 --hello mainOpts opts args = unless (optQuiet mainOpts) $ do
@@ -947,8 +574,8 @@ parseSubcommand subcommands argv = parsed where
 -- >Allo!
 -- >$ ./app bye
 -- >Good bye 
--- >$ ./app bye --name='John'
--- >Good bye John
+-- >$ ./app bye --name='Alice'
+-- >Good bye Alice
 runSubcommand :: (Options opts, MonadIO m) => [Subcommand opts (m a)] -> m a
 runSubcommand subcommands = do
 	argv <- liftIO System.Environment.getArgs

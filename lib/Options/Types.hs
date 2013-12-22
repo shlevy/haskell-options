@@ -3,7 +3,15 @@
 -- License: MIT
 module Options.Types
 	( OptionDefinitions(..)
-	, OptionType(..)
+	
+	, OptionType
+	, optionType
+	, optionTypeName
+	, optionTypeDefault
+	, optionTypeParse
+	, optionTypeShow
+	, optionTypeUnary
+	
 	, Group(..)
 	, OptionKey(..)
 	, Location(..)
@@ -14,20 +22,41 @@ module Options.Types
 	) where
 
 import qualified Data.Map as Map
-import           Language.Haskell.TH (Exp, Q, Type)
 
-data OptionDefinitions a = OptionDefinitions [OptionInfo] [(String, [OptionInfo])]
+data OptionDefinitions = OptionDefinitions [OptionInfo] [(String, [OptionInfo])]
 
 -- | An option's type determines how the option will be parsed, and which
 -- Haskell type the parsed value will be stored as. There are many types
 -- available, covering most basic types and a few more advanced types.
 data OptionType val = OptionType
-	{ optionTypeTemplateType :: Type
-	, optionTypeUnary :: Bool
-	, optionTypeParse :: String -> Either String val
-	, optionTypeTemplateParse :: Q Exp
-	, optionTypeName :: String
+	{ optionTypeName_ :: String
+	, optionTypeDefault_ :: val
+	, optionTypeParse_ :: String -> Either String val
+	, optionTypeShow_ :: val -> String
+
+	-- | TODO docs
+	, optionTypeUnary :: Maybe val
 	}
+
+-- | TODO docs
+optionType :: String -> val -> (String -> Either String val) -> (val -> String) -> OptionType val
+optionType name def parse show' = OptionType name def parse show' Nothing
+
+-- | TODO docs
+optionTypeName :: OptionType val -> String
+optionTypeName = optionTypeName_
+
+-- | TODO docs
+optionTypeDefault :: OptionType val -> val
+optionTypeDefault = optionTypeDefault_
+
+-- | TODO docs
+optionTypeParse :: OptionType val -> String -> Either String val
+optionTypeParse = optionTypeParse_
+
+-- | TODO docs
+optionTypeShow :: OptionType val -> val -> String
+optionTypeShow = optionTypeShow_
 
 data Group = Group
 	{
@@ -47,6 +76,7 @@ data OptionKey
 	= OptionKey String
 	| OptionKeyHelpSummary
 	| OptionKeyHelpGroup String
+	| OptionKeyGenerated Integer
 	deriving (Eq, Ord, Show)
 
 data Location = Location

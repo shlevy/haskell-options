@@ -304,18 +304,14 @@ test_Map = assertions "map" $ do
 	$expect (invalid "1" "Map item \"1\" has no value.")
 
 data TestEnum = Enum1 | Enum2 | Enum3
-	deriving (Enum, Eq, Show)
+	deriving (Bounded, Enum, Eq, Show)
 
 test_Enum :: Test
 test_Enum = assertions "enum" $ do
-	let t = optionType_enum ''TestEnum
-		[ ("e1", Enum1)
-		, ("e2", Enum2)
-		, ("e3", Enum3)
-		]
+	let t = optionType_enum "test enum"
 	let valid = parseValid t
 	let invalid = parseInvalid t
 	
-	$expect (valid "e1" Enum1)
-	$expect (valid "e2" Enum2)
-	$expect (invalid "e4" "\"e4\" is not in {\"e1\", \"e2\", \"e3\"}.")
+	$expect (valid "Enum1" Enum1)
+	$expect (valid "Enum2" Enum2)
+	$expect (invalid "Enum4" "\"Enum4\" is not in {\"Enum1\", \"Enum2\", \"Enum3\"}.")
