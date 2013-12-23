@@ -5,7 +5,7 @@ license-file: license.txt
 author: John Millikin <jmillikin@gmail.com>
 maintainer: John Millikin <jmillikin@gmail.com>
 build-type: Simple
-cabal-version: >= 1.6
+cabal-version: >= 1.8
 category: Console
 stability: experimental
 homepage: https://john-millikin.com/software/haskell-options/
@@ -64,18 +64,6 @@ description:
 extra-source-files:
   cbits/hoehrmann_utf8.c
   cbits/utf8.c
-  --
-  scripts/common.bash
-  scripts/run-coverage
-  scripts/run-tests
-  --
-  tests/options-tests.cabal
-  tests/OptionsTests.hs
-  tests/OptionsTests/Help.hs
-  tests/OptionsTests/OptionTypes.hs
-  tests/OptionsTests/StringParsing.hs
-  tests/OptionsTests/Tokenize.hs
-  tests/OptionsTests/Util.hs
 
 source-repository head
   type: git
@@ -88,7 +76,7 @@ source-repository this
 
 library
   ghc-options: -Wall -O2
-  cc-options: -Wall -O2
+  cc-options: -Wall
   hs-source-dirs: lib
 
   if !os(windows) && impl(ghc < 7.2)
@@ -114,3 +102,32 @@ library
     Options.Tokenize
     Options.Types
     Options.Util
+
+test-suite options_tests
+  type: exitcode-stdio-1.0
+  main-is: OptionsTests.hs
+
+  ghc-options: -Wall -O2
+  cc-options: -Wall
+  hs-source-dirs: lib,tests
+
+  if !os(windows) && impl(ghc < 7.2)
+      cpp-options: -DOPTIONS_ENCODING_UTF8
+      c-sources: cbits/utf8.c
+      build-depends:
+          bytestring >= 0.9
+
+  build-depends:
+      base >= 4.0 && < 5.0
+    , chell >= 0.3.1 && < 0.4
+    , chell-quickcheck >= 0.2 && < 0.3
+    , containers >= 0.1
+    , monads-tf >= 0.1
+    , transformers >= 0.2
+
+  other-modules:
+    OptionsTests.Help
+    OptionsTests.OptionTypes
+    OptionsTests.StringParsing
+    OptionsTests.Tokenize
+    OptionsTests.Util
