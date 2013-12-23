@@ -4,7 +4,10 @@
 -- Module: Options.Tokenize
 -- License: MIT
 module Options.Tokenize
-	( tokenize
+	( Token(..)
+	, tokenFlagName
+	, Tokens(..)
+	, tokenize
 	) where
 
 import           Control.Monad.Error hiding (throwError)
@@ -15,6 +18,21 @@ import qualified Data.Map
 
 import           Options.Types
 import           Options.Util
+
+data Token
+	= TokenUnary String -- flag name
+	| Token String String -- flag name, flag value
+	deriving (Eq, Show)
+
+tokenFlagName :: Token -> String
+tokenFlagName (TokenUnary s) = s
+tokenFlagName (Token s _) = s
+
+data Tokens = Tokens
+	{ tokensMap :: Data.Map.Map OptionKey Token
+	, tokensArgv :: [String]
+	}
+	deriving (Show)
 
 data TokState = TokState
 	{ stArgv :: [String]

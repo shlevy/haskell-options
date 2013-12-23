@@ -11,8 +11,9 @@ module OptionsTests.Help
 import qualified Data.Map as Map
 import           Test.Chell
 
-import           Options.Types
 import           Options.Help
+import           Options.Tokenize
+import           Options.Types
 
 suite_Help :: Suite
 suite_Help = suite "help"

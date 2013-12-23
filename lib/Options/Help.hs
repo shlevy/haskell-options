@@ -14,6 +14,7 @@ import           Data.Maybe (isNothing, listToMaybe)
 import qualified Data.Set as Set
 import qualified Data.Map as Map
 
+import           Options.Tokenize
 import           Options.Types
 
 data HelpFlag = HelpSummary | HelpAll | HelpGroup String
