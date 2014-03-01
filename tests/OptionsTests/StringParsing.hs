@@ -21,11 +21,11 @@ data StringOptions = StringOptions
 
 instance Options StringOptions where
 	defineOptions = pure StringOptions
-		<*> defineOption "string" "" ""
+		<*> simpleOption "string" "" ""
 		-- String, ASCII default
-		<*> defineOption "string_defA" "a" ""
+		<*> simpleOption "string_defA" "a" ""
 		-- String, Unicode default
-		<*> defineOption "string_defU" "\12354" ""
+		<*> simpleOption "string_defU" "\12354" ""
 
 suite_StringParsing :: Suite
 suite_StringParsing = suite "string-parsing"

@@ -22,9 +22,9 @@
 --
 --instance 'Options' MainOptions where
 --    'defineOptions' = pure MainOptions
---        \<*\> 'defineOption' \"message\" \"Hello world!\"
+--        \<*\> 'simpleOption' \"message\" \"Hello world!\"
 --            \"A message to show the user.\"
---        \<*\> 'defineOption' \"quiet\" False
+--        \<*\> 'simpleOption' \"quiet\" False
 --            \"Whether to be quiet.\"
 --
 --main :: IO ()
@@ -55,24 +55,40 @@
 --
 module Options
 	(
-	-- * Options
+	-- * Defining options
 	  Options(..)
 	, defaultOptions
+	, simpleOption
+	, DefineOptions
+	, SimpleOptionType
 	
-	-- * Commands and Subcommands
-	, runCommand
+	-- * Defining subcommands
 	, Subcommand
 	, subcommand
+	
+	-- * Running main with options
+	, runCommand
 	, runSubcommand
 	
-	-- * Defining options
-	, DefineOptions
-	, defineOption
-	, IsOptionType
+	-- * Parsing argument lists
+	, Parsed
+	, parsedError
+	, parsedHelp
 	
-	-- ** Advanced option definitions
+	-- ** Parsing options
+	, ParsedOptions
+	, parsedOptions
+	, parsedArguments
+	, parseOptions
+	
+	-- ** Parsing sub-commands
+	, ParsedSubcommand
+	, parsedSubcommand
+	, parseSubcommand
+	
+	-- * Advanced option definitions
 	, OptionType
-	, defineOptionWith
+	, defineOption
 	, Option
 	, optionShortFlags
 	, optionLongFlags
@@ -80,7 +96,13 @@ module Options
 	, optionDescription
 	, optionGroup
 	
-	-- ** Built-in option types
+	-- ** Option groups
+	, Group
+	, groupName
+	, groupTitle
+	, groupDescription
+	
+	-- * Option types
 	, optionType_bool
 	
 	, optionType_string
@@ -106,35 +128,13 @@ module Options
 	, optionType_map
 	, optionType_enum
 	
-	-- ** Defining custom option types
+	-- ** Custom option types
 	, optionType
 	, optionTypeName
 	, optionTypeDefault
 	, optionTypeParse
 	, optionTypeShow
 	, optionTypeUnary
-	
-	-- * Option groups
-	, Group
-	, groupName
-	, groupTitle
-	, groupDescription
-	
-	-- * Parsing argument lists
-	, Parsed
-	, parsedError
-	, parsedHelp
-	
-	-- ** Parsing options
-	, ParsedOptions
-	, parsedOptions
-	, parsedArguments
-	, parseOptions
-	
-	-- ** Parsing subcommands
-	, ParsedSubcommand
-	, parsedSubcommand
-	, parseSubcommand
 	) where
 
 import           Control.Applicative
@@ -157,15 +157,23 @@ import           Options.Types
 -- instance of 'Options'.
 --
 -- See 'defineOptions' for details on defining instances of 'Options'.
---
--- See 'includeOptions' for details on including imported 'Options' types in
--- locally defined options.
 class Options opts where
-	-- | TODO docs
+	-- | Defines the structure and metadata of the options in this type,
+	-- including their types, flag names, and documentation.
 	--
-	-- Use of 'options' may be arbitrarily nested. Library authors are encouraged
-	-- to aggregate their options into a single top-level type, so application
-	-- authors can include it easily in their own option definitions.
+	-- Options with a basic type and a single flag name may be defined
+	-- with 'simpleOption'. Options with more complex requirements may
+	-- be defined with 'defineOption'.
+	--
+	-- Non-option fields in the type may be set using applicative functions
+	-- such as 'pure'.
+	--
+	-- Options may be included from another type by using a nested call to
+	-- 'defineOptions'.
+	--
+	-- Library authors are encouraged to aggregate their options into a
+	-- few top-level types, so application authors can include it
+	-- easily in their own option definitions.
 	defineOptions :: DefineOptions opts
 
 data DefineOptions a = DefineOptions a (Integer -> (Integer, [OptionInfo])) (Integer -> Map.Map OptionKey Token -> Either String (Integer, a))
@@ -199,40 +207,39 @@ defaultOptions = case defineOptions of
 -- Haskell type the parsed value will be stored as. There are many types
 -- available, covering most basic types and a few more advanced types.
 data OptionType val = OptionType
-	{ optionTypeName_ :: String
-	, optionTypeDefault_ :: val
-	, optionTypeParse_ :: String -> Either String val
-	, optionTypeShow_ :: val -> String
-
-	-- | TODO docs
+	{
+	-- | The name of this option type; used in @--help@ output.
+	  optionTypeName :: String
+	
+	-- | The default value for options of this type. This will be used
+	-- if 'optionDefault' is not set when defining the option.
+	, optionTypeDefault :: val
+	
+	-- | Try to parse the given string to an option value. If parsing
+	-- fails, an error message will be returned.
+	, optionTypeParse :: String -> Either String val
+	
+	-- | Format the value for display; used in @--help@ output.
+	, optionTypeShow :: val -> String
+	
+	-- | If not Nothing, then options of this type may be set by a unary
+	-- flag. The option will be parsed as if the given value were set.
 	, optionTypeUnary :: Maybe val
 	}
 
--- | TODO docs
-optionType :: String -> val -> (String -> Either String val) -> (val -> String) -> OptionType val
+-- | Define a new option type with the given name, default, and behavior.
+optionType :: String -- ^ Name
+           -> val -- ^ Default value
+           -> (String -> Either String val) -- ^ Parser
+           -> (val -> String) -- ^ Formatter
+           -> OptionType val
 optionType name def parse show' = OptionType name def parse show' Nothing
 
--- | TODO docs
-optionTypeName :: OptionType val -> String
-optionTypeName = optionTypeName_
+class SimpleOptionType a where
+	simpleOptionType :: OptionType a
 
--- | TODO docs
-optionTypeDefault :: OptionType val -> val
-optionTypeDefault = optionTypeDefault_
-
--- | TODO docs
-optionTypeParse :: OptionType val -> String -> Either String val
-optionTypeParse = optionTypeParse_
-
--- | TODO docs
-optionTypeShow :: OptionType val -> val -> String
-optionTypeShow = optionTypeShow_
-
-class IsOptionType a where
-	builtinOptionType :: OptionType a
-
-instance IsOptionType Bool where
-	builtinOptionType = optionType_bool
+instance SimpleOptionType Bool where
+	simpleOptionType = optionType_bool
 
 -- | Store an option as a @'Bool'@. The option's value must be either
 -- @\"true\"@ or @\"false\"@.
@@ -261,8 +268,8 @@ parseBool s = case s of
 	"false" -> Right False
 	_ -> Left (show s ++ " is not in {\"true\", \"false\"}.")
 
-instance IsOptionType String where
-	builtinOptionType = optionType_string
+instance SimpleOptionType String where
+	simpleOptionType = optionType_string
 
 -- | Store an option value as a @'String'@. The value is decoded to Unicode
 -- first, if needed. The value may contain non-Unicode bytes, in which case
@@ -270,8 +277,8 @@ instance IsOptionType String where
 optionType_string :: OptionType String
 optionType_string = optionType "text" "" Right id
 
-instance IsOptionType Integer where
-	builtinOptionType = optionType_integer
+instance SimpleOptionType Integer where
+	simpleOptionType = optionType_integer
 
 -- | Store an option as an @'Integer'@. The option value must be an integer.
 -- There is no minimum or maximum value.
@@ -305,88 +312,88 @@ parseBoundedIntegral label = parse where
 optionTypeBoundedInt :: (Bounded a, Integral a, Show a) => String -> OptionType a
 optionTypeBoundedInt tName = optionType tName 0 (parseBoundedIntegral tName) show
 
-instance IsOptionType Int where
-	builtinOptionType = optionType_int
+instance SimpleOptionType Int where
+	simpleOptionType = optionType_int
 
 -- | Store an option as an @'Int'@. The option value must be an integer /n/
 -- such that @'minBound' <= n <= 'maxBound'@.
 optionType_int :: OptionType Int
 optionType_int = optionTypeBoundedInt "int"
 
-instance IsOptionType Int8 where
-	builtinOptionType = optionType_int8
+instance SimpleOptionType Int8 where
+	simpleOptionType = optionType_int8
 
 -- | Store an option as an @'Int8'@. The option value must be an integer /n/
 -- such that @'minBound' <= n <= 'maxBound'@.
 optionType_int8 :: OptionType Int8
 optionType_int8 = optionTypeBoundedInt "int8"
 
-instance IsOptionType Int16 where
-	builtinOptionType = optionType_int16
+instance SimpleOptionType Int16 where
+	simpleOptionType = optionType_int16
 
 -- | Store an option as an @'Int16'@. The option value must be an integer /n/
 -- such that @'minBound' <= n <= 'maxBound'@.
 optionType_int16 :: OptionType Int16
 optionType_int16 = optionTypeBoundedInt "int16"
 
-instance IsOptionType Int32 where
-	builtinOptionType = optionType_int32
+instance SimpleOptionType Int32 where
+	simpleOptionType = optionType_int32
 
 -- | Store an option as an @'Int32'@. The option value must be an integer /n/
 -- such that @'minBound' <= n <= 'maxBound'@.
 optionType_int32 :: OptionType Int32
 optionType_int32 = optionTypeBoundedInt "int32"
 
-instance IsOptionType Int64 where
-	builtinOptionType = optionType_int64
+instance SimpleOptionType Int64 where
+	simpleOptionType = optionType_int64
 
 -- | Store an option as an @'Int64'@. The option value must be an integer /n/
 -- such that @'minBound' <= n <= 'maxBound'@.
 optionType_int64 :: OptionType Int64
 optionType_int64 = optionTypeBoundedInt "int64"
 
-instance IsOptionType Word where
-	builtinOptionType = optionType_word
+instance SimpleOptionType Word where
+	simpleOptionType = optionType_word
 
 -- | Store an option as a @'Word'@. The option value must be a positive
 -- integer /n/ such that @0 <= n <= 'maxBound'@.
 optionType_word :: OptionType Word
 optionType_word = optionTypeBoundedInt "uint"
 
-instance IsOptionType Word8 where
-	builtinOptionType = optionType_word8
+instance SimpleOptionType Word8 where
+	simpleOptionType = optionType_word8
 
 -- | Store an option as a @'Word8'@. The option value must be a positive
 -- integer /n/ such that @0 <= n <= 'maxBound'@.
 optionType_word8 :: OptionType Word8
 optionType_word8 = optionTypeBoundedInt "uint8"
 
-instance IsOptionType Word16 where
-	builtinOptionType = optionType_word16
+instance SimpleOptionType Word16 where
+	simpleOptionType = optionType_word16
 
 -- | Store an option as a @'Word16'@. The option value must be a positive
 -- integer /n/ such that @0 <= n <= 'maxBound'@.
 optionType_word16 :: OptionType Word16
 optionType_word16 = optionTypeBoundedInt "uint16"
 
-instance IsOptionType Word32 where
-	builtinOptionType = optionType_word32
+instance SimpleOptionType Word32 where
+	simpleOptionType = optionType_word32
 
 -- | Store an option as a @'Word32'@. The option value must be a positive
 -- integer /n/ such that @0 <= n <= 'maxBound'@.
 optionType_word32 :: OptionType Word32
 optionType_word32 = optionTypeBoundedInt "uint32"
 
-instance IsOptionType Word64 where
-	builtinOptionType = optionType_word64
+instance SimpleOptionType Word64 where
+	simpleOptionType = optionType_word64
 
 -- | Store an option as a @'Word64'@. The option value must be a positive
 -- integer /n/ such that @0 <= n <= 'maxBound'@.
 optionType_word64 :: OptionType Word64
 optionType_word64 = optionTypeBoundedInt "uint64"
 
-instance IsOptionType Float where
-	builtinOptionType = optionType_float
+instance SimpleOptionType Float where
+	simpleOptionType = optionType_float
 
 -- | Store an option as a @'Float'@. The option value must be a number. Due to
 -- the imprecision of floating-point math, the stored value might not exactly
@@ -395,8 +402,8 @@ instance IsOptionType Float where
 optionType_float :: OptionType Float
 optionType_float = optionType "float32" 0 parseFloat show
 
-instance IsOptionType Double where
-	builtinOptionType = optionType_double
+instance SimpleOptionType Double where
+	simpleOptionType = optionType_double
 
 -- | Store an option as a @'Double'@. The option value must be a number. Due to
 -- the imprecision of floating-point math, the stored value might not exactly
@@ -410,8 +417,8 @@ parseFloat s = case reads s of
 	[(x, "")] -> Right x
 	_ -> Left (show s ++ " is not a number.")
 
-instance IsOptionType a => IsOptionType (Maybe a) where
-	builtinOptionType = optionType_maybe builtinOptionType
+instance SimpleOptionType a => SimpleOptionType (Maybe a) where
+	simpleOptionType = optionType_maybe simpleOptionType
 
 -- | Store an option as a @'Maybe'@ of another type. The value will be
 -- @Nothing@ if the option is set to an empty string.
@@ -532,7 +539,7 @@ optionType_list sep t = optionType name [] parser shower where
 --
 --instance 'Options' MainOptions where
 --    'defineOptions' = pure MainOptions
---        \<*\> defineOptionWith (optionType_enum \"action\") (\\o -> o
+--        \<*\> defineOption (optionType_enum \"action\") (\\o -> o
 --            { 'optionLongFlags' = [\"action\"]
 --            , 'optionDefault' = Hello
 --            })
@@ -545,7 +552,9 @@ optionType_list sep t = optionType name [] parser shower where
 -- >Running action Hello
 -- >$ ./app --action=Goodbye
 -- >Running action Goodbye
-optionType_enum :: (Bounded a, Enum a, Show a) => String -> OptionType a
+optionType_enum :: (Bounded a, Enum a, Show a)
+                => String -- ^ Option type name
+                -> OptionType a
 optionType_enum tName = optionType tName minBound parseEnum show where
 	values = Map.fromList [(show x, x) | x <- enumFrom minBound]
 	setString = "{" ++ intercalate ", " (map show (Map.keys values)) ++ "}"
@@ -555,12 +564,12 @@ optionType_enum tName = optionType tName minBound parseEnum show where
 
 -- | Defines a new option in the current options type.
 --
-defineOption :: IsOptionType a
+simpleOption :: SimpleOptionType a
              => String -- long flag
              -> a -- default value
              -> String -- description
              -> DefineOptions a
-defineOption flag def desc = defineOptionWith builtinOptionType (\o -> o
+simpleOption flag def desc = defineOption simpleOptionType (\o -> o
 	{ optionLongFlags = [flag]
 	, optionDefault = def
 	, optionDescription = desc
@@ -568,7 +577,7 @@ defineOption flag def desc = defineOptionWith builtinOptionType (\o -> o
 
 -- | Defines a new option in the current options type.
 --
--- All options must have a one or more /flags/. Options may also have a
+-- All options must have one or more /flags/. Options may also have a
 -- default value, a description, and a group.
 --
 -- The /flags/ are how the user specifies an option on the command line. Flags
@@ -576,13 +585,13 @@ defineOption flag def desc = defineOptionWith builtinOptionType (\o -> o
 -- details.
 --
 -- @
---'defineOptionWith' 'optionType_word16' (\\o -> o
+--'defineOption' 'optionType_word16' (\\o -> o
 --    { 'optionLongFlags' = [\"port\"]
 --    , 'optionDefault' = \"80\"
 --    })
 -- @
-defineOptionWith :: OptionType a -> (Option a -> Option a) -> DefineOptions a
-defineOptionWith t fn = DefineOptions (optionDefault opt) getInfo parser where
+defineOption :: OptionType a -> (Option a -> Option a) -> DefineOptions a
+defineOption t fn = DefineOptions (optionDefault opt) getInfo parser where
 	opt = fn (Option
 		{ optionShortFlags = []
 		, optionLongFlags = []
@@ -889,17 +898,17 @@ parseSubcommand subcommands argv = parsed where
 --data MainOptions = MainOptions { optQuiet :: Bool }
 --instance 'Options' MainOptions where
 --    'defineOptions' = pure MainOptions
---        \<*\> 'defineOption' \"quiet\" False \"Whether to be quiet.\"
+--        \<*\> 'simpleOption' \"quiet\" False \"Whether to be quiet.\"
 --
 --data HelloOpts = HelloOpts { optHello :: String }
 --instance 'Options' HelloOpts where
 --    'defineOptions' = pure HelloOpts
---        \<*\> 'defineOption' \"hello\" \"Hello!\" \"How to say hello.\"
+--        \<*\> 'simpleOption' \"hello\" \"Hello!\" \"How to say hello.\"
 --
 --data ByeOpts = ByeOpts { optName :: String }
 --instance 'Options' ByeOpts where
 --    'defineOptions' = pure ByeOpts
---        \<*\> 'defineOption' \"name\" \"\" \"The user's name.\"
+--        \<*\> 'simpleOption' \"name\" \"\" \"The user's name.\"
 --
 --hello :: MainOptions -> HelloOpts -> [String] -> IO ()
 --hello mainOpts opts args = unless (optQuiet mainOpts) $ do
