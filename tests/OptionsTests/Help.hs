@@ -48,12 +48,12 @@ infoHelpSummary shorts longs = OptionInfo
 	{ optionInfoKey = OptionKeyHelpSummary
 	, optionInfoShortFlags = shorts
 	, optionInfoLongFlags = longs
-	, optionInfoDefault = "false"
+	, optionInfoDefault = ""
 	, optionInfoUnary = True
 	, optionInfoDescription = "Show option summary." 
 	, optionInfoGroup = groupHelp
 	, optionInfoLocation = Nothing
-	, optionInfoTypeName = "help"
+	, optionInfoTypeName = ""
 	}
 
 infoHelpAll :: OptionInfo
@@ -61,12 +61,12 @@ infoHelpAll = OptionInfo
 	{ optionInfoKey = OptionKeyHelpGroup "all"
 	, optionInfoShortFlags = []
 	, optionInfoLongFlags = ["help-all"]
-	, optionInfoDefault = "false"
+	, optionInfoDefault = ""
 	, optionInfoUnary = True
 	, optionInfoDescription = "Show all help options." 
 	, optionInfoGroup = groupHelp
 	, optionInfoLocation = Nothing
-	, optionInfoTypeName = "help"
+	, optionInfoTypeName = ""
 	}
 
 test_AddHelpFlags_None :: Test
@@ -164,7 +164,7 @@ test_AddHelpFlags_Subcommand = assertions "subcommand" $ do
 		{ optionInfoKey = OptionKeyHelpGroup "foo"
 		, optionInfoShortFlags = []
 		, optionInfoLongFlags = ["help-foo"]
-		, optionInfoDefault = "false"
+		, optionInfoDefault = ""
 		, optionInfoUnary = True
 		, optionInfoDescription = "More Foo Options" 
 		, optionInfoGroup = Just (Group
@@ -173,7 +173,7 @@ test_AddHelpFlags_Subcommand = assertions "subcommand" $ do
 			, groupDescription = "Show all help options."
 			})
 		, optionInfoLocation = Nothing
-		, optionInfoTypeName = "help"
+		, optionInfoTypeName = ""
 		}
 	
 	$expect (equal opts
@@ -220,16 +220,26 @@ test_ShowHelpSummary :: Test
 test_ShowHelpSummary = assertions "showHelpSummary" $ do
 	let expected = "\
 	\Help Options:\n\
-	\  -h, --help                  Show option summary.\n\
-	\  --help-all                  Show all help options.\n\
-	\  --help-group                Show grouped options.\n\
+	\  -h, --help\n\
+	\    Show option summary.\n\
+	\  --help-all\n\
+	\    Show all help options.\n\
+	\  --help-group\n\
+	\    Show grouped options.\n\
 	\\n\
 	\Application Options:\n\
-	\  -a, --long-a                a description here\n\
-	\  --a-looooooooooooong-option description here\n\
+	\  -a, --long-a\n\
+	\    a description here\n\
+	\    default: def\n\
+	\  --a-looooooooooooong-option\n\
+	\    description here\n\
+	\    default: def\n\
 	\  --a-loooooooooooooong-option\n\
 	\    description here\n\
-	\  -b, --long-b                b description here\n\
+	\    default: def\n\
+	\  -b, --long-b\n\
+	\    b description here\n\
+	\    default: def\n\
 	\\n\
 	\Subcommands:\n\
 	\  cmd1\n\
@@ -241,19 +251,31 @@ test_ShowHelpSummary_Subcommand :: Test
 test_ShowHelpSummary_Subcommand = assertions "showHelpSummary-subcommand" $ do
 	let expected = "\
 	\Help Options:\n\
-	\  -h, --help                  Show option summary.\n\
-	\  --help-all                  Show all help options.\n\
-	\  --help-group                Show grouped options.\n\
+	\  -h, --help\n\
+	\    Show option summary.\n\
+	\  --help-all\n\
+	\    Show all help options.\n\
+	\  --help-group\n\
+	\    Show grouped options.\n\
 	\\n\
 	\Application Options:\n\
-	\  -a, --long-a                a description here\n\
-	\  --a-looooooooooooong-option description here\n\
+	\  -a, --long-a\n\
+	\    a description here\n\
+	\    default: def\n\
+	\  --a-looooooooooooong-option\n\
+	\    description here\n\
+	\    default: def\n\
 	\  --a-loooooooooooooong-option\n\
 	\    description here\n\
-	\  -b, --long-b                b description here\n\
+	\    default: def\n\
+	\  -b, --long-b\n\
+	\    b description here\n\
+	\    default: def\n\
 	\\n\
 	\Options for subcommand \"cmd1\":\n\
-	\  -z, --long-z                z description here\n\
+	\  -z, --long-z\n\
+	\    z description here\n\
+	\    default: def\n\
 	\\n"
 	$expect (equalLines expected (helpFor HelpSummary variedOptions (Just "cmd1")))
 
@@ -261,26 +283,44 @@ test_ShowHelpAll :: Test
 test_ShowHelpAll = assertions "showHelpAll" $ do
 	let expected = "\
 	\Help Options:\n\
-	\  -h, --help                  Show option summary.\n\
-	\  --help-all                  Show all help options.\n\
-	\  --help-group                Show grouped options.\n\
+	\  -h, --help\n\
+	\    Show option summary.\n\
+	\  --help-all\n\
+	\    Show all help options.\n\
+	\  --help-group\n\
+	\    Show grouped options.\n\
 	\\n\
 	\Grouped options:\n\
-	\  -g, --long-g                g description here\n\
+	\  -g, --long-g\n\
+	\    g description here\n\
+	\    default: def\n\
 	\\n\
 	\Application Options:\n\
-	\  -a, --long-a                a description here\n\
-	\  --a-looooooooooooong-option description here\n\
+	\  -a, --long-a\n\
+	\    a description here\n\
+	\    default: def\n\
+	\  --a-looooooooooooong-option\n\
+	\    description here\n\
+	\    default: def\n\
 	\  --a-loooooooooooooong-option\n\
 	\    description here\n\
-	\  -b, --long-b                b description here\n\
+	\    default: def\n\
+	\  -b, --long-b\n\
+	\    b description here\n\
+	\    default: def\n\
 	\\n\
 	\Options for subcommand \"cmd1\":\n\
-	\  -z, --long-z                z description here\n\
+	\  -z, --long-z\n\
+	\    z description here\n\
+	\    default: def\n\
 	\\n\
 	\Options for subcommand \"cmd2\":\n\
-	\  -y, --long-y                y description here\n\
-	\  --long-g2                   g2 description here\n\
+	\  -y, --long-y\n\
+	\    y description here\n\
+	\    default: def\n\
+	\  --long-g2\n\
+	\    g2 description here\n\
+	\    default: def\n\
 	\\n"
 	$expect (equalLines expected (helpFor HelpAll variedOptions Nothing))
 
@@ -288,22 +328,36 @@ test_ShowHelpAll_Subcommand :: Test
 test_ShowHelpAll_Subcommand = assertions "showHelpAll-subcommand" $ do
 	let expected = "\
 	\Help Options:\n\
-	\  -h, --help                  Show option summary.\n\
-	\  --help-all                  Show all help options.\n\
-	\  --help-group                Show grouped options.\n\
+	\  -h, --help\n\
+	\    Show option summary.\n\
+	\  --help-all\n\
+	\    Show all help options.\n\
+	\  --help-group\n\
+	\    Show grouped options.\n\
 	\\n\
 	\Grouped options:\n\
-	\  -g, --long-g                g description here\n\
+	\  -g, --long-g\n\
+	\    g description here\n\
+	\    default: def\n\
 	\\n\
 	\Application Options:\n\
-	\  -a, --long-a                a description here\n\
-	\  --a-looooooooooooong-option description here\n\
+	\  -a, --long-a\n\
+	\    a description here\n\
+	\    default: def\n\
+	\  --a-looooooooooooong-option\n\
+	\    description here\n\
+	\    default: def\n\
 	\  --a-loooooooooooooong-option\n\
 	\    description here\n\
-	\  -b, --long-b                b description here\n\
+	\    default: def\n\
+	\  -b, --long-b\n\
+	\    b description here\n\
+	\    default: def\n\
 	\\n\
 	\Options for subcommand \"cmd1\":\n\
-	\  -z, --long-z                z description here\n\
+	\  -z, --long-z\n\
+	\    z description here\n\
+	\    default: def\n\
 	\\n"
 	$expect (equalLines expected (helpFor HelpAll variedOptions (Just "cmd1")))
 
@@ -311,7 +365,9 @@ test_ShowHelpGroup :: Test
 test_ShowHelpGroup = assertions "showHelpGroup" $ do
 	let expected = "\
 	\Grouped options:\n\
-	\  -g, --long-g                g description here\n\
+	\  -g, --long-g\n\
+	\    g description here\n\
+	\    default: def\n\
 	\\n"
 	$expect (equalLines expected (helpFor (HelpGroup "group") variedOptions Nothing))
 
@@ -319,8 +375,12 @@ test_ShowHelpGroup_Subcommand :: Test
 test_ShowHelpGroup_Subcommand = assertions "showHelpGroup-subcommand" $ do
 	let expected = "\
 	\Grouped options:\n\
-	\  -g, --long-g                g description here\n\
-	\  --long-g2                   g2 description here\n\
+	\  -g, --long-g\n\
+	\    g description here\n\
+	\    default: def\n\
+	\  --long-g2\n\
+	\    g2 description here\n\
+	\    default: def\n\
 	\\n"
 	$expect (equalLines expected (helpFor (HelpGroup "group") variedOptions (Just "cmd2")))
 
@@ -328,6 +388,8 @@ test_ShowHelpGroup_SubcommandInvalid :: Test
 test_ShowHelpGroup_SubcommandInvalid = assertions "showHelpGroup-subcommand-invalid" $ do
 	let expected = "\
 	\Grouped options:\n\
-	\  -g, --long-g                g description here\n\
+	\  -g, --long-g\n\
+	\    g description here\n\
+	\    default: def\n\
 	\\n"
 	$expect (equalLines expected (helpFor (HelpGroup "group") variedOptions (Just "noexist")))

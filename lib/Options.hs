@@ -275,7 +275,7 @@ instance SimpleOptionType String where
 -- first, if needed. The value may contain non-Unicode bytes, in which case
 -- they will be stored using GHC 7.4's encoding for mixed-use strings.
 optionType_string :: OptionType String
-optionType_string = optionType "text" "" Right id
+optionType_string = optionType "text" "" Right show
 
 instance SimpleOptionType Integer where
 	simpleOptionType = optionType_integer

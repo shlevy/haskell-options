@@ -9,6 +9,7 @@ module Options.Help
 	) where
 
 import           Control.Monad.Writer
+import           Data.Char (isSpace)
 import           Data.List (intercalate, partition)
 import           Data.Maybe (isNothing, listToMaybe)
 import qualified Data.Set as Set
@@ -41,24 +42,24 @@ addHelpFlags (OptionDefinitions opts subcmds) = OptionDefinitions withHelp subcm
 		{ optionInfoKey = OptionKeyHelpSummary
 		, optionInfoShortFlags = []
 		, optionInfoLongFlags = []
-		, optionInfoDefault = "false"
+		, optionInfoDefault = ""
 		, optionInfoUnary = True
 		, optionInfoDescription = "Show option summary."
 		, optionInfoGroup = Just groupHelp
 		, optionInfoLocation = Nothing
-		, optionInfoTypeName = "help"
+		, optionInfoTypeName = ""
 		}
 	
 	optGroupHelp group flag = OptionInfo
 		{ optionInfoKey = OptionKeyHelpGroup (groupName group)
 		, optionInfoShortFlags = []
 		, optionInfoLongFlags = [flag]
-		, optionInfoDefault = "false"
+		, optionInfoDefault = ""
 		, optionInfoUnary = True
 		, optionInfoDescription = groupDescription group
 		, optionInfoGroup = Just groupHelp
 		, optionInfoLocation = Nothing
-		, optionInfoTypeName = "help"
+		, optionInfoTypeName = ""
 		}
 	
 	optHelpSummary = if Set.member 'h' shortFlags
@@ -130,19 +131,40 @@ showOptionHelp info = do
 		let optStringCsv = intercalate ", " optStrings
 		tell "  "
 		tell optStringCsv
-		
-		let desc = optionInfoDescription info
-		unless (null desc) $ do
-			if length optStringCsv > 27
-				then do
-					tell "\n"
-					tell "    "
-					tell (optionInfoDescription info)
-				else do
-					tell (replicate (28 - length optStringCsv) ' ')
-					tell (optionInfoDescription info)
-		
+		unless (null (optionInfoTypeName info)) $ do
+			tell " :: "
+			tell (optionInfoTypeName info)
 		tell "\n"
+		unless (null (optionInfoDescription info)) $ do
+			forM_ (wrapWords 76 (optionInfoDescription info)) $ \line -> do
+				tell "    "
+				tell line
+				tell "\n"
+		unless (null (optionInfoDefault info)) $ do
+			tell "    default: "
+			tell (optionInfoDefault info)
+			tell "\n"
+
+-- A simple greedy word-wrapper for fixed-width terminals, permitting overruns
+-- and ragged edges.
+wrapWords :: Int -> String -> [String]
+wrapWords breakWidth = wrap where
+	wrap line = if length line <= breakWidth
+		then [line]
+		else if any isBreak line
+			then case splitAt breakWidth line of
+				(beforeBreak, afterBreak) -> case reverseBreak isBreak beforeBreak of
+					(beforeWrap, afterWrap) -> beforeWrap : wrap (afterWrap ++ afterBreak)
+			else [line]
+	isBreak c = case c of
+		'\xA0' -> False -- NO-BREAK SPACE
+		'\x202F' -> False -- NARROW NO-BREAK SPACE
+		'\x2011' -> False -- NON-BREAKING HYPHEN
+		'-' -> True
+		_ -> isSpace c
+	reverseBreak :: (a -> Bool) -> [a] -> ([a], [a])
+	reverseBreak f xs = case break f (reverse xs) of
+		(after, before) -> (reverse before, reverse after)
 
 showHelpSummary :: OptionDefinitions -> Maybe String -> Writer String ()
 showHelpSummary (OptionDefinitions mainOpts subcmds) subcmd = do
