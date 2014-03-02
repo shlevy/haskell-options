@@ -29,9 +29,9 @@ description:
   .
   instance 'Options' MainOptions where
   &#x20;   defineOptions = pure MainOptions
-  &#x20;       \<*\> defineOption \"message\" \"Hello world!\"
+  &#x20;       \<*\> simpleOption \"message\" \"Hello world!\"
   &#x20;           \"A message to show the user.\"
-  &#x20;       \<*\> defineOption \"quiet\" False
+  &#x20;       \<*\> simpleOption \"quiet\" False
   &#x20;           \"Whether to be quiet.\"
   .
   main :: IO ()
