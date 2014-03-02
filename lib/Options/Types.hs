@@ -46,6 +46,7 @@ data OptionInfo = OptionInfo
 	, optionInfoLongFlags :: [String]
 	, optionInfoDefault :: String
 	, optionInfoUnary :: Bool
+	, optionInfoUnaryOnly :: Bool  -- used only for --help and friends
 	, optionInfoDescription :: String
 	, optionInfoGroup :: Maybe Group
 	, optionInfoLocation :: Maybe Location

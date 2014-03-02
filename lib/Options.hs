@@ -611,6 +611,7 @@ defineOption t fn = DefineOptions (optionDefault opt) getInfo parser where
 		, optionInfoLocation = optionLocation opt
 		, optionInfoTypeName = optionTypeName t
 		, optionInfoUnary = isJust (optionTypeUnary t)
+		, optionInfoUnaryOnly = False
 		}])
 	
 	parser key tokens = case Map.lookup (OptionKeyGenerated key) tokens of

@@ -35,34 +35,34 @@ suite_Tokenize = suite "tokenize"
 
 commandDefs :: OptionDefinitions
 commandDefs = OptionDefinitions
-	[ OptionInfo (OptionKey "test.a") ['a'] ["long-a"] "default" False "" Nothing Nothing ""
-	, OptionInfo (OptionKey "test.x") ['x'] ["long-x"] "default" True "" Nothing Nothing ""
-	, OptionInfo (OptionKey "test.y") ['y'] ["long-y"] "default" True "" Nothing Nothing ""
-	, OptionInfo (OptionKey "test.z") ['z'] ["long-z"] "default" True "" Nothing Nothing ""
+	[ OptionInfo (OptionKey "test.a") ['a'] ["long-a"] "default" False False "" Nothing Nothing ""
+	, OptionInfo (OptionKey "test.x") ['x'] ["long-x"] "default" True False "" Nothing Nothing ""
+	, OptionInfo (OptionKey "test.y") ['y'] ["long-y"] "default" True False "" Nothing Nothing ""
+	, OptionInfo (OptionKey "test.z") ['z'] ["long-z"] "default" True False "" Nothing Nothing ""
 	]
 	[]
 
 subcommandDefs :: OptionDefinitions
 subcommandDefs = OptionDefinitions
-	[ OptionInfo (OptionKey "test.a") ['a'] ["long-a"] "default" False "" Nothing Nothing ""
-	, OptionInfo (OptionKey "test.b") ['b'] ["long-b"] "default" False "" Nothing Nothing ""
-	, OptionInfo (OptionKey "test.x") ['x'] ["long-x"] "default" True "" Nothing Nothing ""
-	, OptionInfo (OptionKey "test.y") ['y'] ["long-y"] "default" True "" Nothing Nothing ""
-	, OptionInfo (OptionKey "test.z") ['z'] ["long-z"] "default" True "" Nothing Nothing ""
+	[ OptionInfo (OptionKey "test.a") ['a'] ["long-a"] "default" False False "" Nothing Nothing ""
+	, OptionInfo (OptionKey "test.b") ['b'] ["long-b"] "default" False False "" Nothing Nothing ""
+	, OptionInfo (OptionKey "test.x") ['x'] ["long-x"] "default" True False "" Nothing Nothing ""
+	, OptionInfo (OptionKey "test.y") ['y'] ["long-y"] "default" True False "" Nothing Nothing ""
+	, OptionInfo (OptionKey "test.z") ['z'] ["long-z"] "default" True False "" Nothing Nothing ""
 	]
 	[ ("sub1",
-		[ OptionInfo (OptionKey "sub.d") ['d'] ["long-d"] "default" False "" Nothing Nothing ""
-		, OptionInfo (OptionKey "sub.e") ['e'] ["long-e"] "default" True "" Nothing Nothing ""
+		[ OptionInfo (OptionKey "sub.d") ['d'] ["long-d"] "default" False False "" Nothing Nothing ""
+		, OptionInfo (OptionKey "sub.e") ['e'] ["long-e"] "default" True False "" Nothing Nothing ""
 		])
 	, ("sub2",
-		[ OptionInfo (OptionKey "sub.d") ['d'] ["long-d"] "default" True "" Nothing Nothing ""
-		, OptionInfo (OptionKey "sub.e") ['e'] ["long-e"] "default" True "" Nothing Nothing ""
+		[ OptionInfo (OptionKey "sub.d") ['d'] ["long-d"] "default" True False "" Nothing Nothing ""
+		, OptionInfo (OptionKey "sub.e") ['e'] ["long-e"] "default" True False "" Nothing Nothing ""
 		])
 	]
 
 unicodeDefs :: OptionDefinitions
 unicodeDefs = OptionDefinitions
-	[ OptionInfo (OptionKey "test.a") ['\12354'] ["long-\12354"] "default" False "" Nothing Nothing ""
+	[ OptionInfo (OptionKey "test.a") ['\12354'] ["long-\12354"] "default" False False "" Nothing Nothing ""
 	]
 	[]
 
@@ -121,7 +121,7 @@ test_ShortFlagMissing = assertions "short-flag-missing" $ do
 	$assert (left eTokens)
 	
 	let Left err = eTokens
-	$expect (equal "The flag -a requires an argument." err)
+	$expect (equal "The flag -a requires a parameter." err)
 
 test_ShortFlagUnary :: Test
 test_ShortFlagUnary = assertions "short-flag-unary" $ do
@@ -209,7 +209,7 @@ test_LongFlagMissing = assertions "long-flag-missing" $ do
 	$assert (left eTokens)
 	
 	let Left err = eTokens
-	$expect (equal "The flag --long-a requires an argument." err)
+	$expect (equal "The flag --long-a requires a parameter." err)
 
 test_LongFlagUnary :: Test
 test_LongFlagUnary = assertions "long-flag-unary" $ do

@@ -44,8 +44,8 @@ data TokState = TokState
 	, stArgs :: [String]
 	, stOpts :: [(OptionKey, Token)]
 	, stSeen :: Set.Set OptionKey
-	, stShortKeys :: Data.Map.Map Char (OptionKey, Bool)
-	, stLongKeys :: Data.Map.Map String (OptionKey, Bool)
+	, stShortKeys :: Data.Map.Map Char (OptionKey, OptionInfo)
+	, stLongKeys :: Data.Map.Map String (OptionKey, OptionInfo)
 	, stSubcommands :: [(String, [OptionInfo])]
 	, stSubCmd :: Maybe String
 	}
@@ -133,15 +133,17 @@ parseLong optName = do
 		(before, after) -> case after of
 			'=' : value -> case Data.Map.lookup before longKeys of
 				Nothing -> throwError ("Unknown flag --" ++ before)
-				Just (key, _) -> addOpt key (Token ("--" ++ before) value)
+				Just (key, info) -> if optionInfoUnaryOnly info
+					then throwError ("Flag --" ++ before ++ " takes no parameters.")
+					else addOpt key (Token ("--" ++ before) value)
 			_ -> case Data.Map.lookup optName longKeys of
 				Nothing -> throwError ("Unknown flag --" ++ optName)
-				Just (key, unary) -> if unary
+				Just (key, info) -> if optionInfoUnary info
 					then addOpt key (TokenUnary ("--" ++ optName))
 					else do
 						next <- nextItem
 						case next of
-							Nothing -> throwError ("The flag --" ++ optName ++ " requires an argument.")
+							Nothing -> throwError ("The flag --" ++ optName ++ " requires a parameter.")
 							Just value -> addOpt key (Token ("--" ++ optName) value)
 
 parseShort :: Char -> String -> Tok ()
@@ -150,7 +152,9 @@ parseShort optChar optValue = do
 	shortKeys <- gets stShortKeys
 	case Data.Map.lookup optChar shortKeys of
 		Nothing -> throwError ("Unknown flag " ++ optName)
-		Just (key, unary) -> if unary
+		Just (key, info) -> if optionInfoUnary info
+			-- don't check optionInfoUnaryOnly, because that's only set by --help
+			-- options and they define no short flags.
 			then do
 				addOpt key (TokenUnary optName)
 				case optValue of
@@ -160,21 +164,21 @@ parseShort optChar optValue = do
 				"" -> do
 					next <- nextItem
 					case next of
-						Nothing -> throwError ("The flag " ++ optName ++ " requires an argument.")
+						Nothing -> throwError ("The flag " ++ optName ++ " requires a parameter.")
 						Just value -> addOpt key (Token optName value)
 				_ -> addOpt key (Token optName optValue)
 
-toShortKeys :: [OptionInfo] -> Data.Map.Map Char (OptionKey, Bool)
+toShortKeys :: [OptionInfo] -> Data.Map.Map Char (OptionKey, OptionInfo)
 toShortKeys opts = Data.Map.fromList $ do
 	opt <- opts
 	flag <- optionInfoShortFlags opt
-	return (flag, (optionInfoKey opt, optionInfoUnary opt))
+	return (flag, (optionInfoKey opt, opt))
 
-toLongKeys :: [OptionInfo] -> Data.Map.Map String (OptionKey, Bool)
+toLongKeys :: [OptionInfo] -> Data.Map.Map String (OptionKey, OptionInfo)
 toLongKeys opts = Data.Map.fromList $ do
 	opt <- opts
 	flag <- optionInfoLongFlags opt
-	return (flag, (optionInfoKey opt, optionInfoUnary opt))
+	return (flag, (optionInfoKey opt, opt))
 
 throwError :: String -> Tok a
 throwError = Tok . Control.Monad.Error.throwError
