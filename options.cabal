@@ -91,7 +91,7 @@ library
       build-depends:
           bytestring >= 0.9
 
-  if impl(ghc > 7.2)
+  if impl(ghc > 7.4)
     ghc-options: -fwarn-unsafe
 
   build-depends:
