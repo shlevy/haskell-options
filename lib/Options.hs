@@ -65,8 +65,7 @@ module Options
 	, defaultOptions
 	, simpleOption
 	, DefineOptions
-	, SimpleOptionType
-	, simpleOptionType
+	, SimpleOptionType(..)
 	
 	-- * Defining subcommands
 	, Subcommand
@@ -545,7 +544,7 @@ optionType_list sep t = optionType name [] parser shower where
 --
 --instance 'Options' MainOptions where
 --    'defineOptions' = pure MainOptions
---        \<*\> defineOption (optionType_enum \"action\") (\\o -> o
+--        \<*\> 'defineOption' (optionType_enum \"action\") (\\o -> o
 --            { 'optionLongFlags' = [\"action\"]
 --            , 'optionDefault' = Hello
 --            })
@@ -593,7 +592,7 @@ simpleOption flag def desc = defineOption simpleOptionType (\o -> o
 -- @
 --'defineOption' 'optionType_word16' (\\o -> o
 --    { 'optionLongFlags' = [\"port\"]
---    , 'optionDefault' = \"80\"
+--    , 'optionDefault' = 80
 --    })
 -- @
 defineOption :: OptionType a -> (Option a -> Option a) -> DefineOptions a
