@@ -46,13 +46,18 @@
 --
 -- >$ ./hello --help
 -- >Help Options:
--- >  -h, --help                  Show option summary.
--- >  --help-all                  Show all help options.
+-- >  -h, --help
+-- >    Show option summary.
+-- >  --help-all
+-- >    Show all help options.
 -- >
 -- >Application Options:
--- >  --message                   A message to show the user.
--- >  --quiet                     Whether to be quiet.
---
+-- >  --message :: text
+-- >    A message to show the user.
+-- >    default: "Hello world!"
+-- >  --quiet :: bool
+-- >    Whether to be quiet.
+-- >    default: false
 module Options
 	(
 	-- * Defining options
