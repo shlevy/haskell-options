@@ -66,6 +66,7 @@ module Options
 	, simpleOption
 	, DefineOptions
 	, SimpleOptionType
+	, simpleOptionType
 	
 	-- * Defining subcommands
 	, Subcommand
