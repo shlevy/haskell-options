@@ -9,7 +9,6 @@ module OptionsTests.Tokenize
 	( suite_Tokenize
 	) where
 
-import qualified Data.Map as Map
 import           Test.Chell
 
 import           Options.Types
@@ -322,5 +321,5 @@ test_Unicode = assertions "unicode" $ do
 		$expect (equalTokens [("test.a", Token "--long-\12354" "foo")] tokens)
 		$expect (equal ["bar"] args)
 
-equalTokens :: [(String, Token)] -> Map.Map OptionKey Token -> Assertion
-equalTokens tokens = equal (Map.fromList [(OptionKey k, t) | (k, t) <- tokens])
+equalTokens :: [(String, Token)] -> [(OptionKey, Token)] -> Assertion
+equalTokens tokens = equal ([(OptionKey k, t) | (k, t) <- tokens])

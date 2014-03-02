@@ -7,6 +7,7 @@ module Options.Tokenize
 	( Token(..)
 	, tokenFlagName
 	, Tokens(..)
+	, tokensMap
 	, tokenize
 	) where
 
@@ -15,6 +16,7 @@ import qualified Control.Monad.Error
 import           Control.Monad.State
 import           Data.Functor.Identity
 import qualified Data.Map
+import qualified Data.Set as Set
 
 import           Options.Types
 import           Options.Util
@@ -29,15 +31,19 @@ tokenFlagName (TokenUnary s) = s
 tokenFlagName (Token s _) = s
 
 data Tokens = Tokens
-	{ tokensMap :: Data.Map.Map OptionKey Token
+	{ tokensList :: [(OptionKey, Token)]
 	, tokensArgv :: [String]
 	}
 	deriving (Show)
 
+tokensMap :: Tokens -> Data.Map.Map OptionKey Token
+tokensMap = Data.Map.fromList . tokensList
+
 data TokState = TokState
 	{ stArgv :: [String]
 	, stArgs :: [String]
-	, stOpts :: Data.Map.Map OptionKey Token
+	, stOpts :: [(OptionKey, Token)]
+	, stSeen :: Set.Set OptionKey
 	, stShortKeys :: Data.Map.Map Char (OptionKey, Bool)
 	, stLongKeys :: Data.Map.Map String (OptionKey, Bool)
 	, stSubcommands :: [(String, [OptionInfo])]
@@ -60,7 +66,8 @@ tokenize (OptionDefinitions options subcommands) argv = runIdentity $ do
 	let st = TokState
 		{ stArgv = argv
 		, stArgs = []
-		, stOpts = Data.Map.empty
+		, stOpts = []
+		, stSeen = Set.empty
 		, stShortKeys = toShortKeys options
 		, stLongKeys = toLongKeys options
 		, stSubcommands = subcommands
@@ -69,7 +76,7 @@ tokenize (OptionDefinitions options subcommands) argv = runIdentity $ do
 	(err, st') <- runStateT (runErrorT (unTok loop)) st
 	return (stSubCmd st', case err of
 		Left err' -> Left err'
-		Right _ -> Right (Tokens (stOpts st') (stArgs st')))
+		Right _ -> Right (Tokens (reverse (stOpts st')) (stArgs st')))
 
 loop :: Tok ()
 loop = do
@@ -103,11 +110,14 @@ addArg s = modify (\st -> st { stArgs = stArgs st ++ [s] })
 
 addOpt :: OptionKey -> Token  -> Tok ()
 addOpt key val = do
-	oldOpts <- gets stOpts
-	case Data.Map.lookup key oldOpts of
-		Nothing -> modify (\st -> st { stOpts = Data.Map.insert key val (stOpts st) })
+	seen <- gets stSeen
+	if Set.member key seen
 		-- TODO: include old and new values?
-		Just _ -> throwError ("Multiple values for flag " ++ tokenFlagName val ++ " were provided.")
+		then throwError ("Multiple values for flag " ++ tokenFlagName val ++ " were provided.")
+		else modify (\st -> st
+			{ stOpts = (key, val) : stOpts st
+			, stSeen = Set.insert key (stSeen st)
+			})
 
 mergeSubcommand :: String -> [OptionInfo] -> Tok ()
 mergeSubcommand name opts = modify $ \st -> st

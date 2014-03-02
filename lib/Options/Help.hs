@@ -106,7 +106,7 @@ checkHelpFlag :: Tokens -> Maybe HelpFlag
 checkHelpFlag tokens = flag where
 	flag = listToMaybe helpKeys
 	helpKeys = do
-		k <- Map.keys (tokensMap tokens)
+		(k, _) <- tokensList tokens
 		case k of
 			OptionKeyHelpSummary -> return HelpSummary
 			OptionKeyHelpGroup "all" -> return HelpAll
