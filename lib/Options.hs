@@ -236,7 +236,7 @@ data OptionType val = OptionType
 	-- flag. The option will be parsed as if the given value were set.
 	, optionTypeUnary :: Maybe val
 	
-	-- If not Nothing, then options of this type may be set with repeated
+	-- | If not Nothing, then options of this type may be set with repeated
 	-- flags. Each flag will be parsed with 'optionTypeParse', and the
 	-- resulting parsed values will be passed to this function for merger
 	-- into the final value.
