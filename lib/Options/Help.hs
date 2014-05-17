@@ -181,9 +181,10 @@ showHelpSummary (OptionDefinitions mainOpts subcmds) subcmd = do
 	let hasHelp = filter (\(g,_) -> groupName g == "all") groupInfos
 	forM_ hasHelp showHelpGroup
 	
-	tell "Application Options:\n"
-	forM_ ungroupedMainOptions showOptionHelp
-	unless (null subcmds) (tell "\n")
+	unless (null ungroupedMainOptions) $ do
+		tell "Application Options:\n"
+		forM_ ungroupedMainOptions showOptionHelp
+		unless (null subcmds) (tell "\n")
 	
 	case subcmdOptions of
 		Nothing -> unless (null subcmds) $ do
