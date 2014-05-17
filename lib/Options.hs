@@ -103,6 +103,7 @@ module Options
 	
 	-- ** Option groups
 	, Group
+	, group
 	, groupName
 	, groupTitle
 	, groupDescription
@@ -242,6 +243,14 @@ data OptionType val = OptionType
 	-- into the final value.
 	, optionTypeMerge :: Maybe ([val] -> val)
 	}
+
+-- | Define an option group with the given name and title. Use
+-- 'groupDescription' to add additional descriptive text, if needed.
+group :: String -- ^ Name
+      -> String -- ^ Title; see 'groupTitle'.
+      -> String -- ^ Description; see 'groupDescription'.
+      -> Group
+group = Group
 
 -- | Define a new option type with the given name, default, and behavior.
 optionType :: String -- ^ Name
