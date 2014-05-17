@@ -186,7 +186,7 @@ test_AddHelpFlags_Subcommand = assertions "subcommand" $ do
 
 test_CheckHelpFlag :: Test
 test_CheckHelpFlag = assertions "checkHelpFlag" $ do
-	let checkFlag keys = equal (checkHelpFlag (Tokens [(k, TokenUnary "-h") | k <- keys] []))
+	let checkFlag keys = equal (checkHelpFlag (Tokens [([k], TokenUnary "-h") | k <- keys] []))
 	
 	$expect (checkFlag [] Nothing)
 	$expect (checkFlag [OptionKeyHelpSummary] (Just HelpSummary))

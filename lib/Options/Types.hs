@@ -30,6 +30,7 @@ data OptionKey
 	| OptionKeyHelpSummary
 	| OptionKeyHelpGroup String
 	| OptionKeyGenerated Integer
+	| OptionKeyIgnored
 	deriving (Eq, Ord, Show)
 
 data Location = Location

@@ -30,22 +30,23 @@ tokenFlagName (TokenUnary s) = s
 tokenFlagName (Token s _) = s
 
 data Tokens = Tokens
-	{ tokensList :: [(OptionKey, Token)]
+	{ tokensList :: [([OptionKey], Token)]
 	, tokensArgv :: [String]
 	}
 	deriving (Show)
 
 tokensMap :: Tokens -> Data.Map.Map OptionKey [Token]
 tokensMap tokens = Data.Map.fromListWith (\xs ys -> ys ++ xs) $ do
-	(key, token) <- tokensList tokens
+	(keys, token) <- tokensList tokens
+	key <- keys
 	return (key, [token])
 
 data TokState = TokState
 	{ stArgv :: [String]
 	, stArgs :: [String]
-	, stOpts :: [(OptionKey, Token)]
-	, stShortKeys :: Data.Map.Map Char (OptionKey, OptionInfo)
-	, stLongKeys :: Data.Map.Map String (OptionKey, OptionInfo)
+	, stOpts :: [([OptionKey], Token)]
+	, stShortKeys :: Data.Map.Map Char ([OptionKey], OptionInfo)
+	, stLongKeys :: Data.Map.Map String ([OptionKey], OptionInfo)
 	, stSubcommands :: [(String, [OptionInfo])]
 	, stSubCmd :: Maybe String
 	}
@@ -107,17 +108,20 @@ nextItem = do
 addArg :: String -> Tok ()
 addArg s = modify (\st -> st { stArgs = stArgs st ++ [s] })
 
-addOpt :: OptionKey -> Token  -> Tok ()
-addOpt key val = modify (\st -> st
-	{ stOpts = (key, val) : stOpts st
+addOpt :: [OptionKey] -> Token  -> Tok ()
+addOpt keys val = modify (\st -> st
+	{ stOpts = (keys, val) : stOpts st
 	})
 
 mergeSubcommand :: String -> [OptionInfo] -> Tok ()
 mergeSubcommand name opts = modify $ \st -> st
 	{ stSubCmd = Just name
-	, stShortKeys = Data.Map.union (stShortKeys st) (toShortKeys opts)
-	, stLongKeys = Data.Map.union (stLongKeys st) (toLongKeys opts)
+	, stShortKeys = Data.Map.unionWith unionKeys (stShortKeys st) (toShortKeys opts)
+	, stLongKeys = Data.Map.unionWith unionKeys (stLongKeys st) (toLongKeys opts)
 	}
+
+unionKeys :: ([OptionKey], OptionInfo) -> ([OptionKey], OptionInfo) -> ([OptionKey], OptionInfo)
+unionKeys = undefined
 
 parseLong :: String -> Tok ()
 parseLong optName = do
@@ -126,18 +130,18 @@ parseLong optName = do
 		(before, after) -> case after of
 			'=' : value -> case Data.Map.lookup before longKeys of
 				Nothing -> throwError ("Unknown flag --" ++ before)
-				Just (key, info) -> if optionInfoUnaryOnly info
+				Just (keys, info) -> if optionInfoUnaryOnly info
 					then throwError ("Flag --" ++ before ++ " takes no parameters.")
-					else addOpt key (Token ("--" ++ before) value)
+					else addOpt keys (Token ("--" ++ before) value)
 			_ -> case Data.Map.lookup optName longKeys of
 				Nothing -> throwError ("Unknown flag --" ++ optName)
-				Just (key, info) -> if optionInfoUnary info
-					then addOpt key (TokenUnary ("--" ++ optName))
+				Just (keys, info) -> if optionInfoUnary info
+					then addOpt keys (TokenUnary ("--" ++ optName))
 					else do
 						next <- nextItem
 						case next of
 							Nothing -> throwError ("The flag --" ++ optName ++ " requires a parameter.")
-							Just value -> addOpt key (Token ("--" ++ optName) value)
+							Just value -> addOpt keys (Token ("--" ++ optName) value)
 
 parseShort :: Char -> String -> Tok ()
 parseShort optChar optValue = do
@@ -145,11 +149,11 @@ parseShort optChar optValue = do
 	shortKeys <- gets stShortKeys
 	case Data.Map.lookup optChar shortKeys of
 		Nothing -> throwError ("Unknown flag " ++ optName)
-		Just (key, info) -> if optionInfoUnary info
+		Just (keys, info) -> if optionInfoUnary info
 			-- don't check optionInfoUnaryOnly, because that's only set by --help
 			-- options and they define no short flags.
 			then do
-				addOpt key (TokenUnary optName)
+				addOpt keys (TokenUnary optName)
 				case optValue of
 					[] -> return ()
 					nextChar:nextValue -> parseShort nextChar nextValue
@@ -158,20 +162,20 @@ parseShort optChar optValue = do
 					next <- nextItem
 					case next of
 						Nothing -> throwError ("The flag " ++ optName ++ " requires a parameter.")
-						Just value -> addOpt key (Token optName value)
-				_ -> addOpt key (Token optName optValue)
+						Just value -> addOpt keys (Token optName value)
+				_ -> addOpt keys (Token optName optValue)
 
-toShortKeys :: [OptionInfo] -> Data.Map.Map Char (OptionKey, OptionInfo)
-toShortKeys opts = Data.Map.fromList $ do
+toShortKeys :: [OptionInfo] -> Data.Map.Map Char ([OptionKey], OptionInfo)
+toShortKeys opts = Data.Map.fromListWith (\(keys1, info) (keys2, _) -> (keys2 ++ keys1, info)) $ do
 	opt <- opts
 	flag <- optionInfoShortFlags opt
-	return (flag, (optionInfoKey opt, opt))
+	return (flag, ([optionInfoKey opt], opt))
 
-toLongKeys :: [OptionInfo] -> Data.Map.Map String (OptionKey, OptionInfo)
-toLongKeys opts = Data.Map.fromList $ do
+toLongKeys :: [OptionInfo] -> Data.Map.Map String ([OptionKey], OptionInfo)
+toLongKeys opts = Data.Map.fromListWith (\(keys1, info) (keys2, _) -> (keys2 ++ keys1, info)) $ do
 	opt <- opts
 	flag <- optionInfoLongFlags opt
-	return (flag, (optionInfoKey opt, opt))
+	return (flag, ([optionInfoKey opt], opt))
 
 throwError :: String -> Tok a
 throwError = Tok . Control.Monad.Error.throwError

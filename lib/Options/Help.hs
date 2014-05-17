@@ -110,9 +110,9 @@ checkHelpFlag tokens = flag where
 	helpKeys = do
 		(k, _) <- tokensList tokens
 		case k of
-			OptionKeyHelpSummary -> return HelpSummary
-			OptionKeyHelpGroup "all" -> return HelpAll
-			OptionKeyHelpGroup name -> return (HelpGroup name)
+			[OptionKeyHelpSummary] -> return HelpSummary
+			[OptionKeyHelpGroup "all"] -> return HelpAll
+			[OptionKeyHelpGroup name] -> return (HelpGroup name)
 			_ -> []
 
 helpFor :: HelpFlag -> OptionDefinitions -> Maybe String -> String

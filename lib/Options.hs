@@ -144,7 +144,10 @@ module Options
 	) where
 
 import           Control.Applicative
+import           Control.Monad (forM_)
+import           Control.Monad.Error (ErrorT, runErrorT, throwError)
 import           Control.Monad.IO.Class (liftIO, MonadIO)
+import           Data.Functor.Identity
 import           Data.Int
 import           Data.List (intercalate)
 import qualified Data.Map as Map
@@ -158,6 +161,7 @@ import           System.IO (hPutStr, hPutStrLn, stderr, stdout)
 import           Options.Help
 import           Options.Tokenize
 import           Options.Types
+import           Options.Util (mapEither)
 
 -- | Options are defined together in a single data type, which will be an
 -- instance of 'Options'.
@@ -654,13 +658,6 @@ showMultipleFlagValues = intercalate " " . map showToken where
 	showToken (TokenUnary flagName) = flagName
 	showToken (Token flagName rawValue) = show (flagName ++ "=" ++ rawValue)
 
-mapEither :: (a -> Either err b) -> [a] -> Either err [b]
-mapEither fn = loop [] where
-	loop acc [] = Right (reverse acc)
-	loop acc (a:as) = case fn a of
-		Left err -> Left err
-		Right b -> loop (b:acc) as
-
 data Option a = Option
 	{
 	-- | Short flags are a single character. When entered by a user,
@@ -702,12 +699,62 @@ data Option a = Option
 	, optionLocation :: Maybe Location
 	}
 
--- * Each option defines at least one short or long flag.
--- * There are no duplicate short or long flags, except between subcommands.
--- * All short or long flags have a reasonable name.
--- * All subcommands have unique names.
 validateOptionDefs :: [OptionInfo] -> [(String, [OptionInfo])] -> Either String OptionDefinitions
-validateOptionDefs cmdInfos subInfos = Right (addHelpFlags (OptionDefinitions cmdInfos subInfos)) -- TODO
+validateOptionDefs cmdInfos subInfos = runIdentity $ runErrorT $ do
+	-- All subcommands have unique names.
+	let subcmdNames = map fst subInfos
+	if Set.size (Set.fromList subcmdNames) /= length subcmdNames
+		-- TODO: the error should mention which subcommand names are duplicated
+		then throwError "Multiple subcommands exist with the same name."
+		else return ()
+	
+	-- Each option defines at least one short or long flag.
+	let allOptInfos = cmdInfos ++ concat [infos | (_, infos) <- subInfos]
+	case mapEither optValidFlags allOptInfos of
+		Left err -> throwError err
+		Right _ -> return ()
+	
+	-- There are no duplicate short or long flags, unless:
+	-- The flags are defined in separate subcommands.
+	-- The flags have identical OptionInfos (aside from keys)
+	cmdDeDupedFlags <- checkNoDuplicateFlags Map.empty cmdInfos
+	forM_ subInfos (\subInfo -> checkNoDuplicateFlags cmdDeDupedFlags (snd subInfo))
+	
+	return (addHelpFlags (OptionDefinitions cmdInfos subInfos))
+
+optValidFlags :: OptionInfo -> Either String ()
+optValidFlags info = if null (optionInfoShortFlags info) && null (optionInfoLongFlags info)
+	then case optionInfoLocation info of
+		Nothing -> Left ("Option with description " ++ show (optionInfoDescription info) ++ " has no flags.")
+		Just loc -> Left ("Option with description " ++ show (optionInfoDescription info) ++ " at " ++ locationFilename loc ++ ":" ++ show (locationLine loc) ++ " has no flags.")
+	-- TODO: All short or long flags have a reasonable name.
+	else Right ()
+
+data DeDupFlag = DeDupShort Char | DeDupLong String
+	deriving (Eq, Ord, Show)
+
+checkNoDuplicateFlags :: Map.Map DeDupFlag OptionInfo -> [OptionInfo] -> ErrorT String Identity (Map.Map DeDupFlag OptionInfo)
+checkNoDuplicateFlags checked [] = return checked
+checkNoDuplicateFlags checked (info:infos) = do
+	let mappedShort = map DeDupShort (optionInfoShortFlags info)
+	let mappedLong = map DeDupLong (optionInfoLongFlags info)
+	let mappedFlags = mappedShort ++ mappedLong
+	forM_ mappedFlags $ \mapKey -> case Map.lookup mapKey checked of
+		Nothing -> return ()
+		Just prevInfo -> if eqIgnoringKey info prevInfo
+			then return ()
+			else let
+				flagName = case mapKey of
+					DeDupShort flag -> '-' : flag : []
+					DeDupLong long -> "--" ++ long
+				in throwError ("Duplicate option flag " ++ show flagName ++ ".")
+	
+	let infoMap = Map.fromList [(f, info) | f <- mappedFlags]
+	checkNoDuplicateFlags (Map.union checked infoMap) infos
+
+eqIgnoringKey :: OptionInfo -> OptionInfo -> Bool
+eqIgnoringKey x y = normKey x == normKey y where
+	normKey info = info { optionInfoKey = OptionKeyIgnored }
 
 -- | See @'parseOptions'@ and @'parseSubcommand'@.
 class Parsed a where

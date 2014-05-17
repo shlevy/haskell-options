@@ -321,5 +321,5 @@ test_Unicode = assertions "unicode" $ do
 		$expect (equalTokens [("test.a", Token "--long-\12354" "foo")] tokens)
 		$expect (equal ["bar"] args)
 
-equalTokens :: [(String, Token)] -> [(OptionKey, Token)] -> Assertion
-equalTokens tokens = equal ([(OptionKey k, t) | (k, t) <- tokens])
+equalTokens :: [(String, Token)] -> [([OptionKey], Token)] -> Assertion
+equalTokens tokens = equal ([([OptionKey k], t) | (k, t) <- tokens])

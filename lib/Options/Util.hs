@@ -55,3 +55,10 @@ validLongFlag = valid where
 
 hasDuplicates :: Ord a => [a] -> Bool
 hasDuplicates xs = Set.size (Set.fromList xs) /= length xs
+
+mapEither :: (a -> Either err b) -> [a] -> Either err [b]
+mapEither fn = loop [] where
+	loop acc [] = Right (reverse acc)
+	loop acc (a:as) = case fn a of
+		Left err -> Left err
+		Right b -> loop (b:acc) as
