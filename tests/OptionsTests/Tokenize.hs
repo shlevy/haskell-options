@@ -147,24 +147,24 @@ test_ShortFlagDuplicate = assertions "short-flag-duplicate" $ do
 	do
 		let (subcmd, eTokens) = tokenize commandDefs ["-x", "-x"]
 		$expect (equal Nothing subcmd)
-		$assert (left eTokens)
+		$assert (right eTokens)
 		
-		let Left err = eTokens
-		$expect (equal "Multiple values for flag -x were provided." err)
+		let Right (Tokens tokens args) = eTokens
+		$expect (equalTokens [("test.x", TokenUnary "-x"), ("test.x", TokenUnary "-x")] tokens)
 	do
 		let (subcmd, eTokens) = tokenize commandDefs ["-afoo", "-a", "foo"]
 		$expect (equal Nothing subcmd)
-		$assert (left eTokens)
+		$assert (right eTokens)
 		
-		let Left err = eTokens
-		$expect (equal "Multiple values for flag -a were provided." err)
+		let Right (Tokens tokens args) = eTokens
+		$expect (equalTokens [("test.a", Token "-a" "foo"), ("test.a", Token "-a" "foo")] tokens)
 	do
 		let (subcmd, eTokens) = tokenize commandDefs ["-afoo", "-afoo"]
 		$expect (equal Nothing subcmd)
-		$assert (left eTokens)
+		$assert (right eTokens)
 		
-		let Left err = eTokens
-		$expect (equal "Multiple values for flag -a were provided." err)
+		let Right (Tokens tokens args) = eTokens
+		$expect (equalTokens [("test.a", Token "-a" "foo"), ("test.a", Token "-a" "foo")] tokens)
 
 test_LongFlag :: Test
 test_LongFlag = assertions "long-flag" $ do
@@ -235,24 +235,24 @@ test_LongFlagDuplicate = assertions "long-flag-duplicate" $ do
 	do
 		let (subcmd, eTokens) = tokenize commandDefs ["-x", "--long-x"]
 		$expect (equal Nothing subcmd)
-		$assert (left eTokens)
+		$assert (right eTokens)
 		
-		let Left err = eTokens
-		$expect (equal "Multiple values for flag --long-x were provided." err)
+		let Right (Tokens tokens args) = eTokens
+		$expect (equalTokens [("test.x", TokenUnary "-x"), ("test.x", TokenUnary "--long-x")] tokens)
 	do
 		let (subcmd, eTokens) = tokenize commandDefs ["-afoo", "--long-a", "foo"]
 		$expect (equal Nothing subcmd)
-		$assert (left eTokens)
+		$assert (right eTokens)
 		
-		let Left err = eTokens
-		$expect (equal "Multiple values for flag --long-a were provided." err)
+		let Right (Tokens tokens args) = eTokens
+		$expect (equalTokens [("test.a", Token "-a" "foo"), ("test.a", Token "--long-a" "foo")] tokens)
 	do
 		let (subcmd, eTokens) = tokenize commandDefs ["-afoo", "--long-a=foo"]
 		$expect (equal Nothing subcmd)
-		$assert (left eTokens)
+		$assert (right eTokens)
 		
-		let Left err = eTokens
-		$expect (equal "Multiple values for flag --long-a were provided." err)
+		let Right (Tokens tokens args) = eTokens
+		$expect (equalTokens [("test.a", Token "-a" "foo"), ("test.a", Token "--long-a" "foo")] tokens)
 
 test_EndFlags :: Test
 test_EndFlags = assertions "end-flags" $ do

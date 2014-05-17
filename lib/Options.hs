@@ -140,6 +140,7 @@ module Options
 	, optionTypeParse
 	, optionTypeShow
 	, optionTypeUnary
+	, optionTypeMerge
 	) where
 
 import           Control.Applicative
@@ -181,7 +182,7 @@ class Options opts where
 	-- easily in their own option definitions.
 	defineOptions :: DefineOptions opts
 
-data DefineOptions a = DefineOptions a (Integer -> (Integer, [OptionInfo])) (Integer -> Map.Map OptionKey Token -> Either String (Integer, a))
+data DefineOptions a = DefineOptions a (Integer -> (Integer, [OptionInfo])) (Integer -> Map.Map OptionKey [Token] -> Either String (Integer, a))
 
 instance Functor DefineOptions where
 	fmap fn (DefineOptions defaultValue getInfo parse) = DefineOptions (fn defaultValue) getInfo (\key tokens -> case parse key tokens of
@@ -230,6 +231,12 @@ data OptionType val = OptionType
 	-- | If not Nothing, then options of this type may be set by a unary
 	-- flag. The option will be parsed as if the given value were set.
 	, optionTypeUnary :: Maybe val
+	
+	-- If not Nothing, then options of this type may be set with repeated
+	-- flags. Each flag will be parsed with 'optionTypeParse', and the
+	-- resulting parsed values will be passed to this function for merger
+	-- into the final value.
+	, optionTypeMerge :: Maybe ([val] -> val)
 	}
 
 -- | Define a new option type with the given name, default, and behavior.
@@ -238,7 +245,7 @@ optionType :: String -- ^ Name
            -> (String -> Either String val) -- ^ Parser
            -> (val -> String) -- ^ Formatter
            -> OptionType val
-optionType name def parse show' = OptionType name def parse show' Nothing
+optionType name def parse show' = OptionType name def parse show' Nothing Nothing
 
 class SimpleOptionType a where
 	simpleOptionType :: OptionType a
@@ -619,15 +626,40 @@ defineOption t fn = DefineOptions (optionDefault opt) getInfo parser where
 		, optionInfoUnaryOnly = False
 		}])
 	
+	-- parseToken :: Token -> Either String val
+	parseToken tok = case tok of
+		TokenUnary flagName -> case optionTypeUnary t of
+			Nothing -> Left ("The flag " ++ flagName ++ " requires an argument.")
+			Just val -> Right val
+		Token flagName rawValue -> case optionTypeParse t rawValue of
+			Left err -> Left ("Value for flag " ++ flagName ++ " is invalid: " ++ err)
+			Right val -> Right val
+	
 	parser key tokens = case Map.lookup (OptionKeyGenerated key) tokens of
 		Nothing -> Right (key+1, optionDefault opt)
-		Just tok -> case tok of
-			TokenUnary flagName -> case optionTypeUnary t of
-				Nothing -> Left ("The flag " ++ flagName ++ " requires an argument.")
-				Just val -> Right (key+1, val)
-			Token flagName rawValue -> case optionTypeParse t rawValue of
-				Left err -> Left ("Value for flag " ++ flagName ++ " is invalid: " ++ err)
+		Just toks -> case toks of
+			-- shouldn't happen, but lets do something graceful anyway.
+			[] -> Right (key+1, optionDefault opt)
+			[tok] -> case parseToken tok of
+				Left err -> Left err
 				Right val -> Right (key+1, val)
+			_ -> case optionTypeMerge t of
+				Nothing -> Left ("Multiple values for flag: " ++ showMultipleFlagValues toks)
+				Just appendFn -> case mapEither parseToken toks of
+					Left err -> Left err
+					Right vals -> Right (key+1, appendFn vals)
+
+showMultipleFlagValues :: [Token] -> String
+showMultipleFlagValues = intercalate " " . map showToken where
+	showToken (TokenUnary flagName) = flagName
+	showToken (Token flagName rawValue) = show (flagName ++ "=" ++ rawValue)
+
+mapEither :: (a -> Either err b) -> [a] -> Either err [b]
+mapEither fn = loop [] where
+	loop acc [] = Right (reverse acc)
+	loop acc (a:as) = case fn a of
+		Left err -> Left err
+		Right b -> loop (b:acc) as
 
 data Option a = Option
 	{

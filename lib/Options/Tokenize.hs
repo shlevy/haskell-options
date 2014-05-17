@@ -16,7 +16,6 @@ import qualified Control.Monad.Error
 import           Control.Monad.State
 import           Data.Functor.Identity
 import qualified Data.Map
-import qualified Data.Set as Set
 
 import           Options.Types
 import           Options.Util
@@ -36,14 +35,15 @@ data Tokens = Tokens
 	}
 	deriving (Show)
 
-tokensMap :: Tokens -> Data.Map.Map OptionKey Token
-tokensMap = Data.Map.fromList . tokensList
+tokensMap :: Tokens -> Data.Map.Map OptionKey [Token]
+tokensMap tokens = Data.Map.fromListWith (\xs ys -> ys ++ xs) $ do
+	(key, token) <- tokensList tokens
+	return (key, [token])
 
 data TokState = TokState
 	{ stArgv :: [String]
 	, stArgs :: [String]
 	, stOpts :: [(OptionKey, Token)]
-	, stSeen :: Set.Set OptionKey
 	, stShortKeys :: Data.Map.Map Char (OptionKey, OptionInfo)
 	, stLongKeys :: Data.Map.Map String (OptionKey, OptionInfo)
 	, stSubcommands :: [(String, [OptionInfo])]
@@ -67,7 +67,6 @@ tokenize (OptionDefinitions options subcommands) argv = runIdentity $ do
 		{ stArgv = argv
 		, stArgs = []
 		, stOpts = []
-		, stSeen = Set.empty
 		, stShortKeys = toShortKeys options
 		, stLongKeys = toLongKeys options
 		, stSubcommands = subcommands
@@ -109,15 +108,9 @@ addArg :: String -> Tok ()
 addArg s = modify (\st -> st { stArgs = stArgs st ++ [s] })
 
 addOpt :: OptionKey -> Token  -> Tok ()
-addOpt key val = do
-	seen <- gets stSeen
-	if Set.member key seen
-		-- TODO: include old and new values?
-		then throwError ("Multiple values for flag " ++ tokenFlagName val ++ " were provided.")
-		else modify (\st -> st
-			{ stOpts = (key, val) : stOpts st
-			, stSeen = Set.insert key (stSeen st)
-			})
+addOpt key val = modify (\st -> st
+	{ stOpts = (key, val) : stOpts st
+	})
 
 mergeSubcommand :: String -> [OptionInfo] -> Tok ()
 mergeSubcommand name opts = modify $ \st -> st

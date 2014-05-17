@@ -132,6 +132,7 @@ test-suite options_tests
     , transformers >= 0.2
 
   other-modules:
+    OptionsTests.Api
     OptionsTests.Help
     OptionsTests.OptionTypes
     OptionsTests.StringParsing
