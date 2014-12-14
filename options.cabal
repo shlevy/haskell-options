@@ -1,5 +1,5 @@
 name: options
-version: 1.2
+version: 1.2.1
 license: MIT
 license-file: license.txt
 author: John Millikin <john@john-millikin.com>
@@ -78,7 +78,7 @@ source-repository head
 source-repository this
   type: git
   location: https://john-millikin.com/code/haskell-options/
-  tag: haskell-options_1.2
+  tag: haskell-options_1.2.1
 
 library
   ghc-options: -Wall -O2

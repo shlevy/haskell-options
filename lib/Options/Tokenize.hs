@@ -120,8 +120,9 @@ mergeSubcommand name opts = modify $ \st -> st
 	, stLongKeys = Data.Map.unionWith unionKeys (stLongKeys st) (toLongKeys opts)
 	}
 
+-- note: unionKeys assumes that the OptionInfo is equivalent in both maps.
 unionKeys :: ([OptionKey], OptionInfo) -> ([OptionKey], OptionInfo) -> ([OptionKey], OptionInfo)
-unionKeys = undefined
+unionKeys (keys1, info) (keys2,_) = (keys1++keys2, info)
 
 parseLong :: String -> Tok ()
 parseLong optName = do
