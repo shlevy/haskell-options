@@ -11,6 +11,7 @@ module Options.Tokenize
 	, tokenize
 	) where
 
+import           Control.Applicative (Applicative(..))
 import           Control.Monad.Error hiding (throwError)
 import qualified Control.Monad.Error
 import           Control.Monad.State
@@ -52,6 +53,13 @@ data TokState = TokState
 	}
 
 newtype Tok a = Tok { unTok :: ErrorT String (StateT TokState Identity) a }
+
+instance Functor Tok where
+	fmap = liftM
+
+instance Applicative Tok where
+	pure = return
+	(<*>) = ap
 
 instance Monad Tok where
 	return = Tok . return
